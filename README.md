@@ -1,49 +1,60 @@
-# CodeMint 简洁博客模板（GitHub Pages）
+# CodeMint Markdown Blog
 
-一个适合程序员的轻量静态博客，目标是“好看、易用、低复杂度”。
+一个适合程序员的轻量 Markdown 博客。写文章只需要在 `src/posts/` 新建 Markdown 文件，推送到 `main` 后，GitHub Actions 会自动编译并发布到 `gh-pages` 分支。
 
 ## 文件结构
 
 ```text
-.github/
-  （可选）你的工作流设置
-├─ index.html
-├─ post.html
-├─ data/posts.json
-├─ assets/
-│  ├─ css/style.css
-│  └─ js/main.js
-└─ posts/
-   ├─ why-github-pages.md
-   ├─ design-system-for-dev-blog.md
-   └─ deploy-flow-with-github.md
+├─ .github/workflows/deploy.yml
+├─ .eleventy.js
+├─ package.json
+└─ src/
+   ├─ index.njk
+   ├─ 404.njk
+   ├─ feed.njk
+   ├─ sitemap.njk
+   ├─ robots.njk
+   ├─ assets/
+   │  ├─ css/style.css
+   │  └─ js/main.js
+   └─ posts/
+      ├─ why-github-pages.md
+      ├─ design-system-for-dev-blog.md
+      └─ deploy-flow-with-github.md
 ```
 
-## 部署到 GitHub Pages
+## 写新文章
 
-1. 创建 GitHub 仓库并上传本目录内容。
-2. 在仓库 Settings → Pages，Source 选择 `Deploy from a branch`。
-3. 选择 `main` 分支和 `/ (root)`。
-4. 保存后几分钟即可访问 `https://<用户名>.github.io/<仓库名>/`。
+在 `src/posts/` 新建一个 `.md` 文件，并写 front matter：
 
-## 发布新文章
+```md
+---
+title: "我的新文章"
+description: "文章摘要"
+date: 2026-06-08
+tags:
+  - GitHub
+  - Markdown
+---
 
-- 在 `data/posts.json` 添加一条元信息（`slug` 唯一）。
-- 在 `posts/` 新建同名 `slug.md` 文件。
-- 提交并推送。
+这里开始写正文。
+```
 
-slug 示例：`my-new-note`
+文件名会成为文章 URL，例如 `src/posts/my-note.md` 会发布为 `/posts/my-note/`。
 
-- 索引文件中 `slug`：`my-new-note`
-- 文章正文文件：`posts/my-new-note.md`
+## 本地预览
 
-## 修改风格
+```bash
+npm install
+npm run dev
+```
 
-`assets/css/style.css` 提供一套苹果风的 token 与组件样式：
+## 自动发布
 
-- `--accent` 主色（默认蓝）
-- 字体栈
-- 圆角、线条、阴影
-- 响应式布局
+推送到 `main` 后，`.github/workflows/deploy.yml` 会自动：
 
-你可以直接改 CSS 变量来快速套新主题。
+1. 安装依赖
+2. 编译 Eleventy
+3. 将 `_site/` 发布到 `gh-pages` 分支
+
+GitHub Pages 已配置为读取 `gh-pages` 分支根目录。

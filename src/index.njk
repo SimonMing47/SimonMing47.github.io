@@ -1,0 +1,48 @@
+---
+layout: base.njk
+title: CodeMint · Personal Blog
+description: 基于 GitHub Pages 的极简程序员风格技术博客
+---
+<main>
+  <section class="hero container">
+    <p class="eyebrow">Independent engineer · Build quietly · Think deeply</p>
+    <h1>CodeMint</h1>
+    <p class="sub-title">一个轻量、有质感、易维护的技术博客。像写代码一样写作：清晰、克制、可演进。</p>
+    <a href="#latest" class="btn-primary">浏览最新文章</a>
+  </section>
+
+  <section id="about" class="container section-card">
+    <h2>风格说明</h2>
+    <p>这套博客系统基于 Eleventy 与 GitHub Pages。你只需要写 Markdown，推送到 GitHub 后，Actions 会自动编译并发布到 <code>gh-pages</code> 分支。</p>
+  </section>
+
+  <section id="latest" class="container">
+    <div class="section-title-row">
+      <h2>最新文章</h2>
+      <div class="tools-row">
+        <label class="search-box">
+          <span>⌕</span>
+          <input id="post-search" type="search" placeholder="搜索文章" autocomplete="off" />
+        </label>
+        <div class="tag-row" id="tag-filter" role="list" aria-label="标签筛选"></div>
+      </div>
+    </div>
+    <div id="post-list" class="post-grid">
+      {% for post in collections.posts %}
+        <article class="post-card" data-title="{{ post.data.title }}" data-excerpt="{{ post.data.description }}" data-tags="{{ post.data.tags | join(' ') }}">
+          <p class="meta">{{ post.date | readableDate }} · {{ post.data.readTime or "5 min" }}</p>
+          <h3>{{ post.data.title }}</h3>
+          <p>{{ post.data.description }}</p>
+          {% if post.data.tags %}
+            <div class="tag-row" aria-label="文章标签">
+              {% for tag in post.data.tags %}
+                <span class="tag">{{ tag }}</span>
+              {% endfor %}
+            </div>
+          {% endif %}
+          <a class="btn-primary" href="{{ post.url | url }}">阅读全文 →</a>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+</main>

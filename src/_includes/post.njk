@@ -1,0 +1,20 @@
+---
+layout: base.njk
+---
+<main class="container post-page">
+  <a class="back-link" href="{{ '/' | url }}">← 返回列表</a>
+  <article class="article-card">
+    <p class="eyebrow">{{ date | readableDate }} · {{ readTime or "5 min" }}</p>
+    <h1>{{ title }}</h1>
+    {% if tags %}
+      <div class="tag-row" aria-label="文章标签">
+        {% for tag in tags %}
+          <span class="tag">{{ tag }}</span>
+        {% endfor %}
+      </div>
+    {% endif %}
+    <div class="article-body">
+      {{ content | safe }}
+    </div>
+  </article>
+</main>
