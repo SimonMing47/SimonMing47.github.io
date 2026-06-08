@@ -26,6 +26,27 @@ export default function (eleventyConfig) {
     return new Date().getFullYear();
   });
 
+  eleventyConfig.addFilter("dateYear", (date) => {
+    return new Date(date).getFullYear();
+  });
+
+  eleventyConfig.addFilter("monthDay", (date) => {
+    return new Intl.DateTimeFormat("zh-CN", {
+      month: "2-digit",
+      day: "2-digit"
+    }).format(date);
+  });
+
+  eleventyConfig.addFilter("groupByYear", (posts) => {
+    const grouped = new Map();
+    posts.forEach((post) => {
+      const year = new Date(post.date).getFullYear();
+      if (!grouped.has(year)) grouped.set(year, []);
+      grouped.get(year).push(post);
+    });
+    return Array.from(grouped, ([year, items]) => ({ year, items }));
+  });
+
   eleventyConfig.addFilter("absoluteUrl", (url, siteUrl) => {
     if (url === "/") return siteUrl;
     return new URL(url.replace(/^\//, ""), siteUrl).toString();

@@ -17,19 +17,18 @@
 }
 
 [data-theme="dark"] {
-  --bg: #080b10;
-  --surface: rgba(19, 24, 33, 0.58);
-  --surface-strong: rgba(25, 31, 42, 0.76);
+  --bg: #0b0f14;
+  --surface: rgba(17, 22, 29, 0.72);
+  --surface-strong: rgba(20, 26, 34, 0.86);
   --surface-soft: rgba(255, 255, 255, 0.06);
-  --text: #f6f8fb;
-  --muted: #a8b3c4;
-  --line: rgba(255, 255, 255, 0.14);
-  --line-dark: rgba(255, 255, 255, 0.08);
-  --accent: #66b7ff;
-  --accent-2: #5ee0bf;
-  --glass-shadow: 0 30px 90px rgba(0, 0, 0, 0.42);
-  --glass-edge: inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.06);
+  --text: #e8edf2;
+  --muted: #8d99a8;
+  --line: rgba(255, 255, 255, 0.1);
+  --line-dark: rgba(255, 255, 255, 0.07);
+  --accent: #7aa2d6;
+  --accent-2: #8fb7a6;
+  --glass-shadow: 0 18px 54px rgba(0, 0, 0, 0.28);
+  --glass-edge: inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 * {
@@ -53,9 +52,9 @@ body {
 
 [data-theme="dark"] body {
   background:
-    linear-gradient(120deg, rgba(30, 45, 64, 0.72), rgba(10, 16, 24, 0.82) 44%, rgba(14, 42, 44, 0.44)),
-    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(120deg, rgba(21, 30, 40, 0.62), rgba(11, 15, 20, 0.94) 48%, rgba(12, 23, 28, 0.68)),
+    linear-gradient(rgba(255, 255, 255, 0.026) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.026) 1px, transparent 1px),
     var(--bg);
   background-size: auto, 46px 46px, 46px 46px, auto;
 }
@@ -66,10 +65,10 @@ body {
   z-index: -1;
   pointer-events: none;
   background:
-    linear-gradient(105deg, transparent 0 18%, rgba(255, 255, 255, 0.32) 28%, transparent 42% 100%),
-    conic-gradient(from 180deg at 82% 16%, rgba(22, 119, 210, 0.12), rgba(95, 159, 145, 0.1), rgba(255, 255, 255, 0.22), rgba(22, 119, 210, 0.12));
-  filter: blur(34px) saturate(1.2);
-  opacity: 0.72;
+    linear-gradient(105deg, transparent 0 24%, rgba(255, 255, 255, 0.12) 33%, transparent 48% 100%),
+    linear-gradient(150deg, rgba(122, 162, 214, 0.12), transparent 42%, rgba(143, 183, 166, 0.08));
+  filter: blur(42px) saturate(0.92);
+  opacity: 0.5;
   transform: scale(1.05);
 }
 
@@ -96,7 +95,7 @@ table {
   z-index: 20;
   backdrop-filter: blur(24px) saturate(1.35);
   -webkit-backdrop-filter: blur(24px) saturate(1.35);
-  background: color-mix(in srgb, var(--surface-strong) 72%, transparent);
+  background: color-mix(in srgb, var(--surface-strong) 82%, transparent);
   border-bottom: 1px solid var(--line);
   box-shadow: 0 1px 0 var(--line-dark);
 }
@@ -114,7 +113,6 @@ table {
   font-weight: 700;
   letter-spacing: 0;
   font-size: 1.15rem;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 .nav-links {
@@ -202,18 +200,18 @@ h1 {
   justify-content: center;
   border: 1px solid rgba(0, 113, 227, 0.35);
   color: white;
-  background: linear-gradient(135deg, rgba(10, 132, 255, 0.94), rgba(37, 194, 160, 0.84));
+  background: linear-gradient(135deg, rgba(78, 128, 188, 0.92), rgba(84, 139, 118, 0.86));
   padding: 12px 20px;
   margin-top: 14px;
   border-radius: 999px;
-  box-shadow: 0 18px 42px rgba(10, 132, 255, 0.24), var(--glass-edge);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24), var(--glass-edge);
   transition: transform 0.22s, box-shadow 0.22s;
 }
 
 .btn-primary:hover,
 .btn-primary:focus-visible {
   transform: translateY(-2px);
-  box-shadow: 0 22px 52px rgba(10, 132, 255, 0.3), var(--glass-edge);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.28), var(--glass-edge);
 }
 
 .liquid-device {
@@ -227,9 +225,9 @@ h1 {
   content: "";
   position: absolute;
   border-radius: 40% 60% 52% 48% / 44% 45% 55% 56%;
-  background: linear-gradient(135deg, rgba(10, 132, 255, 0.22), rgba(37, 194, 160, 0.18), rgba(255, 255, 255, 0.44));
+  background: linear-gradient(135deg, rgba(122, 162, 214, 0.12), rgba(143, 183, 166, 0.1), rgba(255, 255, 255, 0.12));
   filter: blur(1px);
-  animation: glassDrift 8s ease-in-out infinite alternate;
+  animation: none;
 }
 
 .liquid-device::before {
@@ -251,23 +249,23 @@ h1 {
   position: absolute;
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 32px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.64), rgba(255, 255, 255, 0.24));
-  backdrop-filter: blur(28px) saturate(1.55);
-  -webkit-backdrop-filter: blur(28px) saturate(1.55);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.08));
+  backdrop-filter: blur(20px) saturate(1.05);
+  -webkit-backdrop-filter: blur(20px) saturate(1.05);
   box-shadow: var(--glass-shadow), var(--glass-edge);
 }
 
 [data-theme="dark"] .glass-panel {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.025));
 }
 
 .glass-panel::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(120deg, rgba(255, 255, 255, 0.76), transparent 28% 70%, rgba(255, 255, 255, 0.22));
-  opacity: 0.46;
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.2), transparent 32% 100%);
+  opacity: 0.32;
   pointer-events: none;
 }
 
@@ -327,12 +325,12 @@ h1 {
 .article-card {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: 16px;
   padding: 26px;
   margin-top: 28px;
   box-shadow: var(--glass-shadow), var(--glass-edge);
-  backdrop-filter: blur(24px) saturate(1.35);
-  -webkit-backdrop-filter: blur(24px) saturate(1.35);
+  backdrop-filter: blur(18px) saturate(1.05);
+  -webkit-backdrop-filter: blur(18px) saturate(1.05);
 }
 
 .profile-note {
@@ -395,26 +393,48 @@ h1 {
 .timeline {
   position: relative;
   display: grid;
-  gap: 0;
+  gap: 34px;
   padding: 12px 0 18px;
 }
 
-.timeline::before {
+.timeline-year-group {
+  position: relative;
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 58px;
+}
+
+.timeline-year {
+  position: sticky;
+  top: 98px;
+  align-self: start;
+  margin: 24px 0 0;
+  color: var(--text);
+  font-family: "SF Mono", "Fira Code", "Consolas", "Courier New", monospace;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.timeline-year-items {
+  position: relative;
+}
+
+.timeline-year-items::before {
   content: "";
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 178px;
+  left: 0;
   width: 1px;
-  background: linear-gradient(to bottom, transparent, var(--line), var(--accent), var(--line), transparent);
-  opacity: 0.82;
+  background: linear-gradient(to bottom, transparent, var(--line), var(--line-dark));
+  opacity: 0.9;
 }
 
 .timeline-item {
   position: relative;
   display: grid;
-  grid-template-columns: 150px minmax(0, 1fr);
-  gap: 56px;
+  grid-template-columns: 86px minmax(0, 1fr);
+  gap: 34px;
   padding: 28px 0;
   animation: riseIn 0.55s ease both;
 }
@@ -422,14 +442,13 @@ h1 {
 .timeline-item::before {
   content: "";
   position: absolute;
-  left: 171px;
-  top: 43px;
-  width: 14px;
-  height: 14px;
+  left: -5px;
+  top: 39px;
+  width: 10px;
+  height: 10px;
   border-radius: 999px;
-  background: radial-gradient(circle at 35% 35%, #ffffff, var(--accent) 58%, rgba(10, 132, 255, 0.2));
-  box-shadow: 0 0 0 7px color-mix(in srgb, var(--accent) 14%, transparent),
-    0 0 28px color-mix(in srgb, var(--accent) 42%, transparent);
+  background: var(--accent);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
 .post-card[hidden] {
@@ -438,7 +457,7 @@ h1 {
 
 .timeline-date {
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   padding-top: 5px;
   font-family: "SF Mono", "Fira Code", "Consolas", "Courier New", monospace;
 }
@@ -451,7 +470,7 @@ h1 {
 
 .timeline-content h3 {
   margin: 2px 0 10px;
-  font-size: 1.45rem;
+  font-size: 1.32rem;
 }
 
 .timeline-content h3 a {
@@ -735,7 +754,17 @@ h1 {
     margin-bottom: 32px;
   }
 
-  .timeline::before {
+  .timeline-year-group {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .timeline-year {
+    position: static;
+    margin: 18px 0 0;
+  }
+
+  .timeline-year-items::before {
     left: 8px;
   }
 
