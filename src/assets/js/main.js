@@ -1,7 +1,6 @@
 function initTheme() {
   const saved = localStorage.getItem("codemint-theme");
-  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const theme = saved || (prefersDark ? "dark" : "light");
+  const theme = saved || "dark";
   document.documentElement.dataset.theme = theme;
 
   const toggle = document.querySelector("#theme-toggle");
