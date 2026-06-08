@@ -26,7 +26,7 @@ description: 基于 GitHub Pages 的极简程序员风格技术博客
     </div>
   </section>
 
-  <section id="about" class="container section-card glass-block">
+  <section id="about" class="container profile-note">
     <h2>关于我</h2>
     <p>这里记录我的编程学习、工程实践和技术思考。内容会围绕代码质量、系统设计、开发工具、问题复盘和长期积累展开，把每天踩过的坑、想清楚的概念和做成的东西沉淀下来。</p>
   </section>
@@ -42,20 +42,22 @@ description: 基于 GitHub Pages 的极简程序员风格技术博客
         <div class="tag-row" id="tag-filter" role="list" aria-label="标签筛选"></div>
       </div>
     </div>
-    <div id="post-list" class="post-grid">
+    <div id="post-list" class="timeline">
       {% for post in collections.posts %}
-        <article class="post-card" data-title="{{ post.data.title }}" data-excerpt="{{ post.data.description }}" data-tags="{{ post.data.tags | join(' ') }}">
-          <p class="meta">{{ post.date | readableDate }} · {{ post.data.readTime or "5 min" }}</p>
-          <h3>{{ post.data.title }}</h3>
-          <p>{{ post.data.description }}</p>
-          {% if post.data.tags %}
-            <div class="tag-row" aria-label="文章标签">
-              {% for tag in post.data.tags %}
-                <span class="tag">{{ tag }}</span>
-              {% endfor %}
-            </div>
-          {% endif %}
-          <a class="btn-primary" href="{{ post.url | url }}">阅读全文 →</a>
+        <article class="timeline-item post-card" data-title="{{ post.data.title }}" data-excerpt="{{ post.data.description }}" data-tags="{{ post.data.tags | join(' ') }}">
+          <time class="timeline-date" datetime="{{ post.date | isoDate }}">{{ post.date | readableDate }}</time>
+          <div class="timeline-content">
+            <p class="meta">{{ post.data.readTime or "5 min" }}</p>
+            <h3><a href="{{ post.url | url }}">{{ post.data.title }}</a></h3>
+            <p>{{ post.data.description }}</p>
+            {% if post.data.tags %}
+              <div class="tag-row" aria-label="文章标签">
+                {% for tag in post.data.tags %}
+                  <span class="tag">{{ tag }}</span>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
         </article>
       {% endfor %}
     </div>
