@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>文章详情 | CodeMint</title>
+    <meta name="description" content="CodeMint 博客文章页面" />
+    <meta name="theme-color" content="#f5f5f7" />
+    <link rel="alternate" type="application/rss+xml" title="CodeMint RSS" href="rss.xml" />
+    <link rel="stylesheet" href="assets/css/style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container nav-wrap">
+        <a class="brand" href="index.html">CodeMint</a>
+        <nav class="nav-links" aria-label="主导航">
+          <a href="index.html#latest">文章</a>
+          <a href="rss.xml">RSS</a>
+          <a href="index.html#about">关于</a>
+          <button class="icon-button" id="theme-toggle" type="button" aria-label="切换主题" title="切换主题">◐</button>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container post-page">
+      <a class="back-link" href="index.html">← 返回列表</a>
+      <article id="post-shell" class="article-card">
+        <p id="post-meta" class="eyebrow">加载中…</p>
+        <h1 id="post-title">文章标题</h1>
+        <div id="post-tags" class="tag-row"></div>
+        <div id="post-content" class="article-body"></div>
+      </article>
+
+      <section id="related" class="related"></section>
+    </main>
+
+    <script src="assets/js/main.js"></script>
+    <script>
+      (function () {
+        const params = new URLSearchParams(window.location.search);
+        const slug = params.get('slug');
+        loadPostBySlug(slug);
+      })();
+    </script>
+  </body>
+</html>

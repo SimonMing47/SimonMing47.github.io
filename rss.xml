@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+  <channel>
+    <title>CodeMint</title>
+    <link>https://simonming47.github.io/codemint-blog/</link>
+    <description>一个轻量、有质感、易维护的技术博客。</description>
+    <language>zh-CN</language>
+    <lastBuildDate>Mon, 08 Jun 2026 00:00:00 +0800</lastBuildDate>
+    <item>
+      <title>从本地写作到上线：一个博客发布流水线</title>
+      <link>https://simonming47.github.io/codemint-blog/post.html?slug=deploy-flow-with-github</link>
+      <guid>https://simonming47.github.io/codemint-blog/post.html?slug=deploy-flow-with-github</guid>
+      <pubDate>Fri, 05 Jun 2026 00:00:00 +0800</pubDate>
+      <description>不借助复杂框架，用最少文件结构搭好发布链路，专注文字与知识沉淀。</description>
+    </item>
+    <item>
+      <title>给程序员博客设计一个不费力的视觉系统</title>
+      <link>https://simonming47.github.io/codemint-blog/post.html?slug=design-system-for-dev-blog</link>
+      <guid>https://simonming47.github.io/codemint-blog/post.html?slug=design-system-for-dev-blog</guid>
+      <pubDate>Mon, 01 Jun 2026 00:00:00 +0800</pubDate>
+      <description>如何用一套简洁规则，让博客在保留代码感的同时看起来高级、易读且不杂乱。</description>
+    </item>
+    <item>
+      <title>为什么我的博客选 GitHub Pages：可维护、稳定、成本接近 0</title>
+      <link>https://simonming47.github.io/codemint-blog/post.html?slug=why-github-pages</link>
+      <guid>https://simonming47.github.io/codemint-blog/post.html?slug=why-github-pages</guid>
+      <pubDate>Sat, 30 May 2026 00:00:00 +0800</pubDate>
+      <description>从一个开发者视角看静态网站托管的现实意义：CI 配置、版本管理和内容迭代。</description>
+    </item>
+  </channel>
+</rss>

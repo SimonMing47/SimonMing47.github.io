@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://simonming47.github.io/codemint-blog/sitemap.xml
