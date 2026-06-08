@@ -4,15 +4,30 @@ title: CodeMint · Personal Blog
 description: 基于 GitHub Pages 的极简程序员风格技术博客
 ---
 <main>
-  <section class="hero container">
-    <p class="eyebrow">Independent engineer · Build quietly · Think deeply</p>
-    <h1>CodeMint</h1>
-    <p class="sub-title">一个轻量、有质感、易维护的技术博客。像写代码一样写作：清晰、克制、可演进。</p>
-    <a href="#latest" class="btn-primary">浏览最新文章</a>
+  <section class="hero">
+    <div class="hero-inner container">
+      <div class="hero-copy">
+        <p class="eyebrow">Independent engineer · Build quietly · Think deeply</p>
+        <h1>CodeMint</h1>
+        <p class="sub-title">一个轻量、有质感、易维护的技术博客。像写代码一样写作：清晰、克制、可演进。</p>
+        <a href="#latest" class="btn-primary">浏览最新文章</a>
+      </div>
+      <div class="liquid-device" aria-hidden="true">
+        <div class="glass-panel panel-main">
+          <span class="panel-kicker">~/posts</span>
+          <strong>markdown → pages</strong>
+          <code>git push origin main</code>
+        </div>
+        <div class="glass-panel panel-float">
+          <span>build</span>
+          <strong>12s</strong>
+        </div>
+      </div>
+    </div>
   </section>
 
-  <section id="about" class="container section-card">
-    <h2>风格说明</h2>
+  <section id="about" class="container section-card glass-block">
+    <h2>Markdown first</h2>
     <p>这套博客系统基于 Eleventy 与 GitHub Pages。你只需要写 Markdown，推送到 GitHub 后，Actions 会自动编译并发布到 <code>gh-pages</code> 分支。</p>
   </section>
 
