@@ -5,13 +5,75 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{ title or site.title }}</title>
     <meta name="description" content="{{ description or site.description }}" />
-    <meta name="theme-color" content="#f5f5f7" />
+    <meta name="author" content="{{ site.author }}" />
+    <meta name="keywords" content="{{ keywords or site.keywords }}" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="theme-color" content="#080b10" />
+    <link rel="canonical" href="{{ page.url | absoluteUrl(site.url) }}" />
     <meta property="og:title" content="{{ title or site.title }}" />
     <meta property="og:description" content="{{ description or site.description }}" />
     <meta property="og:type" content="{% if page.url and page.url.startsWith('/posts/') %}article{% else %}website{% endif %}" />
     <meta property="og:url" content="{{ page.url | absoluteUrl(site.url) }}" />
+    <meta property="og:site_name" content="{{ site.title }}" />
+    <meta property="og:locale" content="{{ site.locale }}" />
+    <meta property="og:image" content="{{ site.image | absoluteUrl(site.url) }}" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="{{ site.title }} 技术博客封面" />
+    {% if page.url and page.url.startsWith('/posts/') %}
+      <meta property="article:author" content="{{ site.author }}" />
+      <meta property="article:published_time" content="{{ date | isoDate }}" />
+      {% if tags %}
+        {% for tag in tags %}
+          <meta property="article:tag" content="{{ tag }}" />
+        {% endfor %}
+      {% endif %}
+    {% endif %}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="{{ title or site.title }}" />
+    <meta name="twitter:description" content="{{ description or site.description }}" />
+    <meta name="twitter:image" content="{{ site.image | absoluteUrl(site.url) }}" />
+    <meta name="twitter:image:alt" content="{{ site.title }} 技术博客封面" />
     <link rel="alternate" type="application/rss+xml" title="{{ site.title }} RSS" href="{{ '/rss.xml' | url }}" />
     <link rel="stylesheet" href="{{ '/assets/css/style.css' | url }}" />
+    {% if page.url and page.url.startsWith('/posts/') %}
+      <script type="application/ld+json">
+        {{ {
+          "@context": "https://schema.org",
+          "@type": "BlogPosting",
+          "headline": title,
+          "description": description,
+          "url": page.url | absoluteUrl(site.url),
+          "datePublished": date | isoDate,
+          "dateModified": date | isoDate,
+          "author": {
+            "@type": "Person",
+            "name": site.author
+          },
+          "publisher": {
+            "@type": "Person",
+            "name": site.author
+          },
+          "image": site.image | absoluteUrl(site.url),
+          "mainEntityOfPage": page.url | absoluteUrl(site.url)
+        } | jsonify | safe }}
+      </script>
+    {% else %}
+      <script type="application/ld+json">
+        {{ {
+          "@context": "https://schema.org",
+          "@type": "Blog",
+          "name": site.title,
+          "description": site.description,
+          "url": site.url,
+          "inLanguage": "zh-CN",
+          "author": {
+            "@type": "Person",
+            "name": site.author
+          }
+        } | jsonify | safe }}
+      </script>
+    {% endif %}
   </head>
   <body>
     <div class="ambient-layer" aria-hidden="true"></div>

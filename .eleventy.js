@@ -31,6 +31,10 @@ export default function (eleventyConfig) {
     return new URL(url.replace(/^\//, ""), siteUrl).toString();
   });
 
+  eleventyConfig.addFilter("jsonify", (value) => {
+    return JSON.stringify(value, null, 2);
+  });
+
   eleventyConfig.addCollection("posts", (collectionApi) => {
     return collectionApi
       .getFilteredByGlob("src/posts/*.md")
