@@ -38,6 +38,12 @@
         "url": "https://aman.ai/",
         "domain": "aman.ai",
         "description": "AI 研究论文精读笔记，结构化整理，适合补全理论脉络。"
+      },
+      {
+        "name": "AI Fundamentals (Grissom Wang)",
+        "url": "https://forceinjection.github.io/",
+        "domain": "forceinjection.github.io",
+        "description": "GPU 架构、CUDA 编程、大模型基础及 AI Agent 知识体系，适合补全 AI Infra 底层硬件与系统视角。"
       }
     ]
   },
