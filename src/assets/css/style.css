@@ -317,6 +317,31 @@ h1 {
   margin: 0;
 }
 
+.about-page {
+  padding-top: 72px;
+}
+
+.about-hero {
+  max-width: 760px;
+  margin-bottom: 28px;
+}
+
+.about-hero h1 {
+  max-width: 720px;
+  font-size: clamp(2.2rem, 4.5vw, 4rem);
+  margin: 12px 0 14px;
+}
+
+.about-hero p:last-child {
+  color: var(--muted);
+  font-size: 1.06rem;
+}
+
+.about-profile {
+  margin-left: 0;
+  margin-right: auto;
+}
+
 .profile-intro {
   max-width: 560px;
 }
