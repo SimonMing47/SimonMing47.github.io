@@ -569,6 +569,7 @@ h1 {
 
 .post-page {
   padding-top: 34px;
+  max-width: min(900px, 92vw);
 }
 
 .back-link {
@@ -577,10 +578,11 @@ h1 {
 }
 
 .article-card h1 {
-  font-size: clamp(2rem, 2.8vw, 2.4rem);
-  margin-top: 12px;
-  margin-bottom: 8px;
-  line-height: 1.25;
+  max-width: 760px;
+  font-size: clamp(1.72rem, 2vw, 2.08rem);
+  margin-top: 14px;
+  margin-bottom: 14px;
+  line-height: 1.32;
 }
 
 .article-body {
