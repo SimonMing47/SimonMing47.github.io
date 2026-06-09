@@ -122,6 +122,26 @@ table {
   color: var(--accent);
 }
 
+.nav-icon-link {
+  width: 32px;
+  height: 32px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 999px;
+}
+
+.nav-icon-link svg {
+  width: 17px;
+  height: 17px;
+  fill: currentColor;
+}
+
+.nav-icon-link:hover,
+.nav-icon-link:focus-visible {
+  border-color: var(--line);
+}
+
 .icon-button {
   width: 32px;
   height: 32px;
