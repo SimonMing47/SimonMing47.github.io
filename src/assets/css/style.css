@@ -216,33 +216,21 @@ h1 {
 
 .liquid-device {
   position: relative;
-  min-height: 390px;
+  min-height: 320px;
   animation: riseIn 0.9s ease 0.1s both;
 }
 
-.liquid-device::before,
-.liquid-device::after {
+.liquid-device::before {
   content: "";
   position: absolute;
   border-radius: 40% 60% 52% 48% / 44% 45% 55% 56%;
-  background: linear-gradient(135deg, rgba(122, 162, 214, 0.12), rgba(143, 183, 166, 0.1), rgba(255, 255, 255, 0.12));
+  background: linear-gradient(135deg, rgba(122, 162, 214, 0.1), rgba(143, 183, 166, 0.08), rgba(255, 255, 255, 0.08));
   filter: blur(1px);
   animation: none;
-}
-
-.liquid-device::before {
-  width: 320px;
-  height: 320px;
-  right: 40px;
-  top: 8px;
-}
-
-.liquid-device::after {
-  width: 190px;
-  height: 190px;
-  right: 250px;
-  bottom: 20px;
-  animation-duration: 10s;
+  width: 280px;
+  height: 280px;
+  right: 56px;
+  top: 2px;
 }
 
 .glass-panel {
@@ -270,11 +258,11 @@ h1 {
 }
 
 .panel-main {
-  width: min(420px, 100%);
-  min-height: 260px;
+  width: min(400px, 100%);
+  min-height: 230px;
   right: 0;
-  top: 36px;
-  padding: 34px;
+  top: 32px;
+  padding: 30px;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -283,7 +271,7 @@ h1 {
 
 .panel-main strong {
   position: relative;
-  font-size: 2.2rem;
+  font-size: 2rem;
   line-height: 1.08;
 }
 
@@ -299,26 +287,6 @@ h1 {
 .panel-kicker {
   position: relative;
   color: var(--muted);
-}
-
-.panel-float {
-  right: 300px;
-  top: 250px;
-  width: 155px;
-  height: 118px;
-  padding: 22px;
-  display: grid;
-  align-content: center;
-  gap: 4px;
-}
-
-.panel-float span {
-  color: var(--muted);
-  font-size: 0.82rem;
-}
-
-.panel-float strong {
-  font-size: 2.4rem;
 }
 
 .profile-note,
@@ -470,7 +438,7 @@ h1 {
 
 .timeline-content h3 {
   margin: 2px 0 10px;
-  font-size: 1.32rem;
+  font-size: 1.28rem;
 }
 
 .timeline-content h3 a {
@@ -564,13 +532,27 @@ h1 {
 }
 
 .article-card h1 {
+  font-size: clamp(2rem, 2.8vw, 2.4rem);
   margin-top: 12px;
   margin-bottom: 8px;
+  line-height: 1.25;
 }
 
 .article-body {
   color: var(--text);
-  font-size: 1.04rem;
+  font-size: 0.98rem;
+}
+
+.article-body h2 {
+  font-size: 1.42rem;
+}
+
+.article-body h3 {
+  font-size: 1.2rem;
+}
+
+.article-body h4 {
+  font-size: 1.08rem;
 }
 
 .article-body h2,
@@ -712,33 +694,20 @@ h1 {
   }
 
   .liquid-device {
-    min-height: 260px;
+    min-height: 230px;
   }
 
   .panel-main {
     right: auto;
     left: 0;
     width: 100%;
-    min-height: 210px;
-  }
-
-  .panel-float {
-    right: 18px;
-    top: 182px;
+    min-height: 200px;
   }
 
   .liquid-device::before {
     right: 8px;
     width: 220px;
     height: 220px;
-  }
-
-  .liquid-device::after {
-    right: auto;
-    left: 16px;
-    bottom: 0;
-    width: 150px;
-    height: 150px;
   }
 
   .nav-links {
