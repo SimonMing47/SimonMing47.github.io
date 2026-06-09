@@ -67,7 +67,7 @@ export default function (eleventyConfig) {
   });
 
   return {
-    pathPrefix: "/codemint-blog/",
+    pathPrefix: "/",
     dir: {
       input: "src",
       output: "_site",

@@ -1,11 +1,11 @@
 {
-  "name": "codemint-blog",
+  "name": "simonming47.github.io",
   "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "eleventy --serve --pathprefix=/codemint-blog/",
-    "build": "eleventy --pathprefix=/codemint-blog/"
+    "dev": "eleventy --serve",
+    "build": "eleventy"
   },
   "devDependencies": {
     "@11ty/eleventy": "^3.1.2"
