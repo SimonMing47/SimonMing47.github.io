@@ -698,11 +698,20 @@ h1 {
 }
 
 .bookmark-group {
-  margin: 38px 0;
+  position: relative;
+  margin: 44px 0;
+  padding: 22px 26px 8px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
 }
 
 .bookmark-group h2 {
-  margin-bottom: 16px;
+  margin: 0 0 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.32rem;
 }
 
 .bookmark-list {
@@ -714,17 +723,22 @@ h1 {
   display: grid;
   grid-template-columns: minmax(130px, 0.7fr) minmax(190px, 0.9fr) minmax(0, 1.8fr);
   gap: 22px;
-  padding: 20px 0;
+  padding: 18px 0;
   border-top: 1px solid var(--line-dark);
   transition: color 0.2s, transform 0.2s;
 }
 
+.bookmark-item:first-child {
+  border-top: 0;
+}
+
 .bookmark-item:last-child {
-  border-bottom: 1px solid var(--line-dark);
+  border-bottom: 0;
 }
 
 .bookmark-item:hover,
 .bookmark-item:focus-visible {
+  background: color-mix(in srgb, var(--surface-soft) 60%, transparent);
   color: var(--accent);
   transform: translateX(2px);
 }
@@ -829,8 +843,14 @@ h1 {
     padding-top: 42px;
   }
 
+  .bookmark-group {
+    margin: 32px 0;
+    padding: 18px 18px 4px;
+  }
+
   .bookmark-item {
     grid-template-columns: 1fr;
     gap: 6px;
+    padding: 16px 0;
   }
 }
