@@ -44,6 +44,12 @@
         "url": "https://forceinjection.github.io/",
         "domain": "forceinjection.github.io",
         "description": "GPU 架构、CUDA 编程、大模型基础及 AI Agent 知识体系，适合补全 AI Infra 底层硬件与系统视角。"
+      },
+      {
+        "name": "Steins;Lab (团子云技术)",
+        "url": "https://steinslab.io/",
+        "domain": "steinslab.io",
+        "description": "专注分布式技术研究分享，涵盖系统架构、网络、存储等底层技术。"
       }
     ]
   },
