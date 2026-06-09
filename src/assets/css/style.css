@@ -122,29 +122,6 @@ table {
   color: var(--accent);
 }
 
-.icon-link {
-  width: 32px;
-  height: 32px;
-  display: inline-grid;
-  place-items: center;
-  color: var(--muted);
-  border: 1px solid transparent;
-  border-radius: 999px;
-  transition: color 0.2s, border-color 0.2s;
-}
-
-.icon-link svg {
-  width: 17px;
-  height: 17px;
-  fill: currentColor;
-}
-
-.icon-link:hover,
-.icon-link:focus-visible {
-  color: var(--accent);
-  border-color: var(--line);
-}
-
 .icon-button {
   width: 32px;
   height: 32px;
