@@ -655,23 +655,9 @@ h1 {
   font-size: clamp(1.84rem, 2.8vw, 2.72rem);
 }
 
-.bookmark-hero p:last-child,
-.bookmark-focus p {
+.bookmark-hero p:last-child {
   color: var(--muted);
   font-size: 1rem;
-}
-
-.bookmark-focus {
-  max-width: 780px;
-  margin-bottom: 42px;
-  padding: 16px 0 18px 22px;
-  border-left: 1px solid var(--accent);
-}
-
-.focus-label {
-  margin: 0 0 6px;
-  color: var(--accent);
-  font-weight: 700;
 }
 
 .bookmark-group {
