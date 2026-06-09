@@ -1,0 +1,122 @@
+[
+  {
+    "id": "personal-blogs",
+    "title": "个人博客：深度技术文",
+    "items": [
+      {
+        "name": "Lilian Weng",
+        "url": "https://lilianweng.github.io/",
+        "domain": "lilianweng.github.io",
+        "description": "OpenAI VP of Research。文章通常是超长综述，把一个研究方向系统合成一篇，引用极全。"
+      },
+      {
+        "name": "Sebastian Raschka",
+        "url": "https://sebastianraschka.com/blog/",
+        "domain": "sebastianraschka.com/blog",
+        "description": "ML 畅销书作者。常写 LLM 架构对比、从零实现模型等内容，代码可复现。"
+      },
+      {
+        "name": "Andrej Karpathy",
+        "url": "https://karpathy.github.io/",
+        "domain": "karpathy.github.io",
+        "description": "神经网络和 LLM 深度讲解，适合建立直觉和底层理解。"
+      },
+      {
+        "name": "Chip Huyen",
+        "url": "https://huyenchip.com/",
+        "domain": "huyenchip.com",
+        "description": "ML 系统设计、MLOps、LLM 工程化，偏真实生产实践。"
+      },
+      {
+        "name": "Eugene Yan",
+        "url": "https://eugeneyan.com/",
+        "domain": "eugeneyan.com",
+        "description": "ML 系统设计模式、推荐系统、LLM 应用，实战导向。"
+      },
+      {
+        "name": "Aman's AI Journal",
+        "url": "https://aman.ai/",
+        "domain": "aman.ai",
+        "description": "AI 研究论文精读笔记，结构化整理，适合补全理论脉络。"
+      }
+    ]
+  },
+  {
+    "id": "learning-resources",
+    "title": "系统化学习资源",
+    "items": [
+      {
+        "name": "GenAI Handbook",
+        "url": "https://genai-handbook.github.io/",
+        "domain": "genai-handbook.github.io",
+        "description": "从基础到前沿的 GenAI 全景指南，适合搭建完整学习路线。"
+      },
+      {
+        "name": "动手学深度学习",
+        "url": "https://d2l.ai/",
+        "domain": "d2l.ai",
+        "description": "李沐团队出品，理论与代码同步推进，适合系统补基础。"
+      },
+      {
+        "name": "Jay Alammar",
+        "url": "https://jalammar.github.io/",
+        "domain": "jalammar.github.io",
+        "description": "The Illustrated Transformer 等可视化讲解经典，适合建立模型结构直觉。"
+      },
+      {
+        "name": "Fast & Efficient LLM Inference with vLLM",
+        "url": "https://learn.deeplearning.ai/courses/fast-and-efficient-llm-inference-with-vllm/lesson/rm60gb/introduction",
+        "domain": "DeepLearning.AI × Red Hat",
+        "description": "免费实操课程：LLM Compressor 压缩模型 → vLLM 部署推理服务 → GuideLLM 基准测试，覆盖推理全生命周期。"
+      }
+    ]
+  },
+  {
+    "id": "company-blogs",
+    "title": "公司与团队技术博客",
+    "items": [
+      {
+        "name": "Hugging Face Blog",
+        "url": "https://huggingface.co/blog",
+        "domain": "huggingface.co/blog",
+        "description": "模型发布、技术解析、实战教程，跟进开源生态很有价值。"
+      },
+      {
+        "name": "Google Research Blog",
+        "url": "https://research.google/blog/",
+        "domain": "research.google/blog",
+        "description": "前沿研究成果和研究脉络，适合观察大团队的技术方向。"
+      },
+      {
+        "name": "Anthropic Research",
+        "url": "https://www.anthropic.com/research",
+        "domain": "anthropic.com/research",
+        "description": "安全对齐、可解释性和模型行为研究方向的重要来源。"
+      }
+    ]
+  },
+  {
+    "id": "community",
+    "title": "聚合与社区",
+    "items": [
+      {
+        "name": "awesome-ml-blogs",
+        "url": "https://github.com/antoinebrl/awesome-ml-blogs",
+        "domain": "github.com/antoinebrl/awesome-ml-blogs",
+        "description": "ML 博客合集，可以按兴趣筛选长期关注列表。"
+      },
+      {
+        "name": "LessWrong",
+        "url": "https://www.lesswrong.com/",
+        "domain": "lesswrong.com",
+        "description": "AI 安全与理性思考相关的深度讨论社区。"
+      },
+      {
+        "name": "Off-Policy",
+        "url": "https://www.off-policy.com/",
+        "domain": "off-policy.com",
+        "description": "AI 博客评测和推荐，适合发现新的高质量写作者。"
+      }
+    ]
+  }
+]
