@@ -56,6 +56,10 @@ export default function (eleventyConfig) {
     return JSON.stringify(value, null, 2);
   });
 
+  eleventyConfig.addFilter("stripLeadingTitle", (content) => {
+    return String(content || "").replace(/^\s*<h1[^>]*>[\s\S]*?<\/h1>\s*/i, "");
+  });
+
   eleventyConfig.addCollection("posts", (collectionApi) => {
     return collectionApi
       .getFilteredByGlob("src/posts/*.md")

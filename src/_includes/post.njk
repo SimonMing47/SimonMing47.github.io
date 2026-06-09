@@ -14,7 +14,7 @@ layout: base.njk
       </div>
     {% endif %}
     <div class="article-body">
-      {{ content | safe }}
+      {{ content | stripLeadingTitle | safe }}
     </div>
   </article>
 </main>
