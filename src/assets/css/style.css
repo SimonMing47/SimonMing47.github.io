@@ -317,6 +317,51 @@ h1 {
   margin: 0;
 }
 
+.profile-intro {
+  max-width: 560px;
+}
+
+.career-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line-dark);
+}
+
+.career-item {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 24px;
+  align-items: baseline;
+}
+
+.career-item span {
+  color: var(--muted);
+  font-family: "SF Mono", "Fira Code", "Consolas", "Courier New", monospace;
+  font-size: 0.82rem;
+}
+
+.career-item strong {
+  font-weight: 600;
+}
+
+.focus-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.focus-list span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-family: "SF Mono", "Fira Code", "Consolas", "Courier New", monospace;
+  font-size: 0.76rem;
+  padding: 5px 10px;
+}
+
 .section-title-row {
   display: flex;
   justify-content: space-between;
@@ -721,6 +766,11 @@ h1 {
 
   .profile-note {
     margin-bottom: 32px;
+  }
+
+  .career-item {
+    grid-template-columns: 1fr;
+    gap: 2px;
   }
 
   .timeline-year-group {
