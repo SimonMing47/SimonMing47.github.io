@@ -402,16 +402,17 @@ h1 {
 .timeline-item {
   position: relative;
   display: grid;
-  grid-template-columns: 72px minmax(0, 1fr);
-  gap: 28px;
+  grid-template-columns: 78px minmax(0, 1fr);
+  gap: 24px;
   padding: 20px 0;
+  padding-left: 24px;
   animation: riseIn 0.42s ease both;
 }
 
 .timeline-item::before {
   content: "";
   position: absolute;
-  left: -5px;
+  left: -3px;
   top: 34px;
   width: 7px;
   height: 7px;
