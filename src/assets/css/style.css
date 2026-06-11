@@ -101,10 +101,29 @@ table {
 }
 
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   color: var(--text);
-  font-weight: 700;
   letter-spacing: 0;
+}
+
+.brand img {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+}
+
+.brand-main {
+  font-weight: 700;
   font-size: 1rem;
+}
+
+.brand-by {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  margin-left: 2px;
 }
 
 .nav-links {
@@ -798,6 +817,10 @@ h1 {
 
   .nav-links {
     gap: 12px;
+  }
+
+  .brand-by {
+    display: none;
   }
 
   .tools-row,
