@@ -465,14 +465,7 @@ h1 {
 }
 
 .timeline-year-items::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 1px;
-  background: var(--line-dark);
-  opacity: 1;
+  content: none;
 }
 
 .timeline-item {
@@ -481,20 +474,11 @@ h1 {
   grid-template-columns: 78px minmax(0, 1fr);
   gap: 24px;
   padding: 20px 0;
-  padding-left: 24px;
   animation: riseIn 0.42s ease both;
 }
 
 .timeline-item::before {
-  content: "";
-  position: absolute;
-  left: -3px;
-  top: 34px;
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  background: var(--muted);
-  box-shadow: none;
+  content: none;
 }
 
 .post-card[hidden] {
@@ -854,7 +838,7 @@ h1 {
   }
 
   .timeline-year-items::before {
-    left: 8px;
+    content: none;
   }
 
   .timeline-item {
@@ -864,8 +848,7 @@ h1 {
   }
 
   .timeline-item::before {
-    left: 1px;
-    top: 36px;
+    content: none;
   }
 
   .timeline-date {
