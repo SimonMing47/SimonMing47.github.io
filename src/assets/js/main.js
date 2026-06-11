@@ -1,6 +1,6 @@
 function initTheme() {
   const saved = localStorage.getItem("codemint-theme");
-  const theme = saved || "dark";
+  const theme = saved || "light";
   document.documentElement.dataset.theme = theme;
 
   const toggle = document.querySelector("#theme-toggle");
