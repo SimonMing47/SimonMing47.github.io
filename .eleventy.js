@@ -2,6 +2,19 @@ export default function (eleventyConfig) {
   eleventyConfig.addPassthroughCopy({ "src/assets": "assets" });
   eleventyConfig.addPassthroughCopy({ "src/.nojekyll": ".nojekyll" });
 
+  const slugifyHeading = (value) => {
+    return String(value || "")
+      .toLowerCase()
+      .replace(/<[^>]+>/g, "")
+      .trim()
+      .replace(/[^\p{Letter}\p{Number}]+/gu, "-")
+      .replace(/^-+|-+$/g, "");
+  };
+
+  const normalizePostContent = (content) => {
+    return String(content || "").replace(/^\s*<h1[^>]*>[\s\S]*?<\/h1>\s*/i, "");
+  };
+
   eleventyConfig.addFilter("readableDate", (date) => {
     return new Intl.DateTimeFormat("zh-CN", {
       year: "numeric",
@@ -57,7 +70,34 @@ export default function (eleventyConfig) {
   });
 
   eleventyConfig.addFilter("stripLeadingTitle", (content) => {
-    return String(content || "").replace(/^\s*<h1[^>]*>[\s\S]*?<\/h1>\s*/i, "");
+    return normalizePostContent(content);
+  });
+
+  eleventyConfig.addFilter("addHeadingAnchors", (content) => {
+    const used = new Map();
+    return normalizePostContent(content).replace(/<h([2-3])([^>]*)>([\s\S]*?)<\/h\1>/gi, (match, level, attrs, text) => {
+      if (/\sid=/.test(attrs)) return match;
+      const baseSlug = slugifyHeading(text) || `section-${used.size + 1}`;
+      const count = used.get(baseSlug) || 0;
+      used.set(baseSlug, count + 1);
+      const slug = count ? `${baseSlug}-${count + 1}` : baseSlug;
+      return `<h${level}${attrs} id="${slug}">${text}</h${level}>`;
+    });
+  });
+
+  eleventyConfig.addFilter("toc", (content) => {
+    const used = new Map();
+    return normalizePostContent(content)
+      .match(/<h([2-3])[^>]*>([\s\S]*?)<\/h\1>/gi)
+      ?.map((heading) => {
+        const [, level, text] = heading.match(/<h([2-3])[^>]*>([\s\S]*?)<\/h\1>/i) || [];
+        const label = String(text || "").replace(/<[^>]+>/g, "").trim();
+        const baseSlug = slugifyHeading(label) || `section-${used.size + 1}`;
+        const count = used.get(baseSlug) || 0;
+        used.set(baseSlug, count + 1);
+        const slug = count ? `${baseSlug}-${count + 1}` : baseSlug;
+        return { level: Number(level), label, slug };
+      }) || [];
   });
 
   eleventyConfig.addCollection("posts", (collectionApi) => {

@@ -13,8 +13,21 @@ layout: base.njk
         {% endfor %}
       </div>
     {% endif %}
+    {% set headings = content | toc %}
+    {% if headings.length %}
+      <details class="toc-box" open>
+        <summary>Table of contents</summary>
+        <ol>
+          {% for item in headings %}
+            <li class="toc-level-{{ item.level }}">
+              <a href="#{{ item.slug }}">{{ item.label }}</a>
+            </li>
+          {% endfor %}
+        </ol>
+      </details>
+    {% endif %}
     <div class="article-body">
-      {{ content | stripLeadingTitle | safe }}
+      {{ content | addHeadingAnchors | safe }}
     </div>
   </article>
 </main>
