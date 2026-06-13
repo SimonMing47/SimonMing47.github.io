@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>我的 AI Infra 学习计划：从推理服务到 RL 训练推理加速</title>
+    <meta name="description" content="一条偏工程、偏系统的 AI Infra 学习路线：以推理服务为入口，逐步进入 vLLM、Ray、RLHF/GRPO 和集群部署。" />
+    <meta name="author" content="SimonMing47" />
+    <meta name="keywords" content="编程学习, 工程实践, 技术博客, 系统设计, 开发工具, 技术复盘, JavaScript, GitHub Pages" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="theme-color" content="#080b10" />
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+    <link rel="canonical" href="https://sigmundming.dev/posts/ai-infra-learning-plan/" />
+    <meta property="og:title" content="我的 AI Infra 学习计划：从推理服务到 RL 训练推理加速" />
+    <meta property="og:description" content="一条偏工程、偏系统的 AI Infra 学习路线：以推理服务为入口，逐步进入 vLLM、Ray、RLHF/GRPO 和集群部署。" />
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://sigmundming.dev/posts/ai-infra-learning-plan/" />
+    <meta property="og:site_name" content="CodeMint" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta property="og:image" content="https://sigmundming.dev/assets/og-image.svg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="CodeMint 技术博客封面" />
+    
+      <meta property="article:author" content="SimonMing47" />
+      <meta property="article:published_time" content="2026-06-11T00:00:00.000Z" />
+      
+        
+          <meta property="article:tag" content="AI Infra" />
+        
+          <meta property="article:tag" content="推理服务" />
+        
+          <meta property="article:tag" content="vLLM" />
+        
+          <meta property="article:tag" content="Ray" />
+        
+          <meta property="article:tag" content="云原生" />
+        
+      
+    
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="我的 AI Infra 学习计划：从推理服务到 RL 训练推理加速" />
+    <meta name="twitter:description" content="一条偏工程、偏系统的 AI Infra 学习路线：以推理服务为入口，逐步进入 vLLM、Ray、RLHF/GRPO 和集群部署。" />
+    <meta name="twitter:image" content="https://sigmundming.dev/assets/og-image.svg" />
+    <meta name="twitter:image:alt" content="CodeMint 技术博客封面" />
+    <link rel="alternate" type="application/rss+xml" title="CodeMint RSS" href="/rss.xml" />
+    <link rel="stylesheet" href="/assets/css/style.css" />
+    
+      <script type="application/ld+json">
+        {
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "我的 AI Infra 学习计划：从推理服务到 RL 训练推理加速",
+  "description": "一条偏工程、偏系统的 AI Infra 学习路线：以推理服务为入口，逐步进入 vLLM、Ray、RLHF/GRPO 和集群部署。",
+  "url": "https://sigmundming.dev/posts/ai-infra-learning-plan/",
+  "datePublished": "2026-06-11T00:00:00.000Z",
+  "dateModified": "2026-06-11T00:00:00.000Z",
+  "author": {
+    "@type": "Person",
+    "name": "SimonMing47"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "SimonMing47"
+  },
+  "image": "https://sigmundming.dev/assets/og-image.svg",
+  "mainEntityOfPage": "https://sigmundming.dev/posts/ai-infra-learning-plan/"
+}
+      </script>
+    
+  </head>
+  <body>
+    <div class="ambient-layer" aria-hidden="true"></div>
+    <header class="site-header">
+      <div class="container nav-wrap">
+        <a class="brand" href="/" aria-label="CodeMint 首页">
+          <img src="/assets/favicon.svg" alt="" aria-hidden="true" />
+          <span class="brand-text">
+            <span class="brand-main">CodeMint</span>
+            <span class="brand-by">by Sigmund Ming</span>
+          </span>
+        </a>
+        <nav class="nav-links" aria-label="主导航">
+          <a href="/#latest">文章</a>
+          <a href="/bookmarks/">收藏夹</a>
+          <a href="/rss.xml">RSS</a>
+          <a href="/about/">关于</a>
+          <a class="nav-icon-link" href="https://github.com/SimonMing47" aria-label="GitHub" title="GitHub">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56v-2.17c-3.2.7-3.87-1.36-3.87-1.36-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.03 1.75 2.69 1.24 3.34.95.1-.74.4-1.24.73-1.53-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.28 1.18-3.09-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.16 1.18A10.94 10.94 0 0 1 12 6c.98 0 1.95.13 2.87.39 2.19-1.49 3.15-1.18 3.15-1.18.63 1.58.23 2.75.11 3.04.74.81 1.18 1.83 1.18 3.09 0 4.42-2.69 5.39-5.26 5.68.41.36.78 1.06.78 2.14v3.18c0 .31.21.67.8.56A11.52 11.52 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z" />
+            </svg>
+          </a>
+          <a class="nav-icon-link" href="mailto:mingxing.tc@gmail.com" aria-label="Email" title="Email">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4.75 5.75h14.5c.97 0 1.75.78 1.75 1.75v9c0 .97-.78 1.75-1.75 1.75H4.75A1.75 1.75 0 0 1 3 16.5v-9c0-.97.78-1.75 1.75-1.75Zm.04 1.5 7.21 5.06 7.21-5.06H4.79Zm14.71 1.63-7.07 4.96a.75.75 0 0 1-.86 0L4.5 8.88v7.62c0 .14.11.25.25.25h14.5c.14 0 .25-.11.25-.25V8.88Z" />
+            </svg>
+          </a>
+          <button class="icon-button" id="theme-toggle" type="button" aria-label="切换主题" title="切换主题">◐</button>
+        </nav>
+      </div>
+    </header>
+    <main class="container post-page">
+  <a class="back-link" href="/">← 返回列表</a>
+  <article class="article-card">
+    <p class="eyebrow">2026年6月11日 · 12 min</p>
+    <h1>我的 AI Infra 学习计划：从推理服务到 RL 训练推理加速</h1>
+    
+      <div class="tag-row" aria-label="文章标签">
+        
+          <span class="tag">AI Infra</span>
+        
+          <span class="tag">推理服务</span>
+        
+          <span class="tag">vLLM</span>
+        
+          <span class="tag">Ray</span>
+        
+          <span class="tag">云原生</span>
+        
+      </div>
+    
+    
+    
+      <details class="toc-box" open>
+        <summary>Table of contents</summary>
+        <ol>
+          
+            <li class="toc-level-2">
+              <a href="#目标定位">目标定位</a>
+            </li>
+          
+            <li class="toc-level-2">
+              <a href="#阶段路线">阶段路线</a>
+            </li>
+          
+            <li class="toc-level-3">
+              <a href="#phase-1-推理基础">Phase 1：推理基础</a>
+            </li>
+          
+            <li class="toc-level-2">
+              <a href="#phase-2-vllm-量化与部署">Phase 2：vLLM、量化与部署</a>
+            </li>
+          
+            <li class="toc-level-2">
+              <a href="#phase-3-ray-与-rl-训练中的推理">Phase 3：Ray 与 RL 训练中的推理</a>
+            </li>
+          
+            <li class="toc-level-2">
+              <a href="#phase-4-毕业项目">Phase 4：毕业项目</a>
+            </li>
+          
+            <li class="toc-level-2">
+              <a href="#phase-5-面试与表达">Phase 5：面试与表达</a>
+            </li>
+          
+            <li class="toc-level-2">
+              <a href="#推荐资料">推荐资料</a>
+            </li>
+          
+            <li class="toc-level-2">
+              <a href="#每周节奏">每周节奏</a>
+            </li>
+          
+            <li class="toc-level-2">
+              <a href="#最终输出物">最终输出物</a>
+            </li>
+          
+        </ol>
+      </details>
+    
+    <div class="article-body">
+      <p>这份计划不是为了把自己包装成算法研究员。我的切入点更实际一点：用已有的网络、分布式系统和 Kubernetes 经验，去理解并掌握 AI Infra 里最工程化的一段，也就是推理服务、GPU 集群部署，以及 RL 训练过程里的推理加速。</p>
+<p>我更关心的问题是：一个模型从请求进来到 token 出来，中间到底经过了哪些组件？延迟和吞吐卡在哪里？KV Cache 怎么管理？vLLM 为什么能提升吞吐？当训练框架进入 RLHF/GRPO 阶段，为什么 generate 会变成核心瓶颈？这些问题背后，其实都很像系统工程问题。</p>
+<h2 id="目标定位">目标定位</h2>
+<p>目标岗位可以概括成两类：</p>
+<ol>
+<li>AI Platform Engineer</li>
+<li>Inference Serving Engineer</li>
+</ol>
+<p>我不打算走纯算法路线，也不会把时间主要花在手写 CUDA kernel、算子融合、编译优化、NCCL 拓扑设计或者 Megatron/DeepSpeed 这类大训练框架上。它们很重要，但不是我当前最合适的切入口。</p>
+<p>我更适合的组合是：</p>
+<ul>
+<li>Kubernetes 和 GPU 集群管理</li>
+<li>分布式系统和服务治理</li>
+<li>推理服务部署与性能优化</li>
+<li>Agent Infra 和多服务编排经验</li>
+<li>RL 训练中推理阶段的系统瓶颈分析</li>
+</ul>
+<p>这条路线的关键词是：先把推理链路吃透，再把推理服务放进训练系统里看。</p>
+<h2 id="阶段路线">阶段路线</h2>
+<p>整个计划分成五个阶段。原始计划覆盖 110 个学习日，我会按照自己的时间压缩推进，但每个阶段都要留下可复盘的产物。</p>
+<h3 id="phase-1-推理基础">Phase 1：推理基础</h3>
+<p>第一阶段先补齐推理系统的基本盘。</p>
+<p>重点不是背术语，而是把一条请求拆开：prefill、decode、KV Cache、batching、scheduler、worker、GPU memory、模型格式、监控指标，每个环节都要知道它解决什么问题，又会制造什么新问题。</p>
+<p>这个阶段要重点理解：</p>
+<ul>
+<li>Transformer 推理过程</li>
+<li>Prefill 与 decode 的差异</li>
+<li>GPU memory hierarchy</li>
+<li>KV Cache 显存占用和管理方式</li>
+<li>PagedAttention 的核心思想</li>
+<li>Static batching、dynamic batching、continuous batching</li>
+<li>Prefix caching、speculative decoding、long context</li>
+<li>TTFT、TPS、E2E latency、GPU utilization 等指标</li>
+</ul>
+<p>这一阶段的输出物是一张完整的推理服务架构图：从 API gateway 到 scheduler，再到 worker 和 model execution，把每个可能优化的位置标出来。</p>
+<h2 id="phase-2-vllm-量化与部署">Phase 2：vLLM、量化与部署</h2>
+<p>第二阶段进入主战场：vLLM。</p>
+<p>vLLM 是当前最值得深入掌握的推理服务框架之一。这里不能只会启动服务，还要理解它为什么快，尤其是 PagedAttention、BlockManager、Scheduler、continuous batching、chunked prefill 这些核心设计。</p>
+<p>这一阶段会做几件事：</p>
+<ul>
+<li>走读 vLLM 的核心调用链</li>
+<li>理解 LLMEngine、Scheduler、BlockManager、Worker</li>
+<li>对比 vLLM、SGLang、TensorRT-LLM 的适用场景</li>
+<li>实操 GPTQ、AWQ、FP8 等量化方案</li>
+<li>在 Kubernetes 上部署 vLLM 推理服务</li>
+<li>接入 Prometheus/Grafana 观察关键指标</li>
+<li>做不同 batch size、sequence length、quantization 配置下的 benchmark</li>
+</ul>
+<p>这一阶段的目标不是“跑起来”，而是能解释清楚为什么某个参数会影响吞吐、显存和延迟。</p>
+<h2 id="phase-3-ray-与-rl-训练中的推理">Phase 3：Ray 与 RL 训练中的推理</h2>
+<p>第三阶段开始把推理服务放进 RLHF/GRPO 的训练流程里。</p>
+<p>普通在线推理更关心用户请求的延迟，而 RL 训练里的推理更关心批量生成吞吐。一次 RLHF 或 GRPO 迭代里，actor 要 generate，reward model 要打分，reference model 要参与 KL 约束，很多时间其实都花在推理阶段。</p>
+<p>这部分的关键问题是：</p>
+<ul>
+<li>actor、reward、reference、critic 如何共享 GPU 资源</li>
+<li>generate 阶段为什么容易成为训练瓶颈</li>
+<li>Ray placement group 如何影响资源调度</li>
+<li>veRL 和 OpenRLHF 如何集成 vLLM</li>
+<li>参数更新后，推理服务如何切换或同步</li>
+<li>多模型、多 GPU、多节点下如何做 placement 和容错</li>
+</ul>
+<p>这一阶段我会重点看：</p>
+<ul>
+<li>Ray actor、task、placement group</li>
+<li>RLHF 从 SFT、Reward Model 到 PPO 的流程</li>
+<li>GRPO 的训练流程</li>
+<li>veRL 的 HybridFlow 架构</li>
+<li>OpenRLHF 的 Ray + vLLM 方案</li>
+<li>RL 训练里的推理吞吐优化</li>
+</ul>
+<p>这一阶段的输出物是一张 RL 训练推理系统架构图，重点标出 generate 阶段、资源调度和模型协同关系。</p>
+<h2 id="phase-4-毕业项目">Phase 4：毕业项目</h2>
+<p>只看文档不够，最终要做一个能讲得清、跑得起来、测得出来的项目。</p>
+<p>毕业项目目标是：设计并部署一个 RL 训练推理服务集群。</p>
+<p>计划技术栈：</p>
+<ul>
+<li>Kubernetes</li>
+<li>Ray</li>
+<li>vLLM</li>
+<li>veRL 或 OpenRLHF</li>
+<li>Prometheus/Grafana</li>
+<li>Helm chart 或 Kubernetes manifests</li>
+</ul>
+<p>项目交付物包括：</p>
+<ul>
+<li>系统架构设计文档</li>
+<li>可运行的部署方案</li>
+<li>性能 benchmark 报告</li>
+<li>不同配置下的吞吐、延迟、GPU 利用率对比</li>
+<li>一篇完整技术复盘</li>
+</ul>
+<p>我希望这个项目最后不是一个 demo，而是一份能拿来讨论系统设计取舍的工程材料。</p>
+<h2 id="phase-5-面试与表达">Phase 5：面试与表达</h2>
+<p>最后一个阶段不是刷题意义上的冲刺，而是把前面的学习变成清晰表达。</p>
+<p>需要准备三类内容：</p>
+<ul>
+<li>推理服务工程问题：batching、KV Cache、scheduler、quantization、benchmark</li>
+<li>RL 训练推理问题：generate 瓶颈、多模型资源调度、Ray placement、vLLM 集成</li>
+<li>系统设计问题：多租户推理服务、GPU 资源隔离、服务容错、灰度发布、监控告警</li>
+</ul>
+<p>面试表达上，我不会假装自己是算法专家。更准确的定位是：有分布式系统和 Kubernetes 背景的工程师，正在把系统能力迁移到 AI Infra，重点做推理服务和训练推理加速。</p>
+<h2 id="推荐资料">推荐资料</h2>
+<p>这条路线里，我会优先跟这些资料：</p>
+<ul>
+<li>vLLM 文档与源码</li>
+<li>PagedAttention 论文</li>
+<li>SGLang 相关博客与文档</li>
+<li>TensorRT-LLM 和 NVIDIA Developer Blog</li>
+<li>Ray 文档，尤其是 actor、placement group、Ray Serve</li>
+<li>veRL 文档与 HybridFlow 论文</li>
+<li>OpenRLHF 文档</li>
+<li>Lilian Weng 的长文综述</li>
+<li>Sebastian Raschka 的 LLM 工程文章</li>
+<li>Chip Huyen 的 ML Systems 与 LLM 工程化文章</li>
+</ul>
+<p>资料很多，但不应该变成收藏夹式学习。每一类资料都要对应一个问题：它解释了哪个系统瓶颈？它能指导哪个实验？它能变成哪一段项目经验？</p>
+<h2 id="每周节奏">每周节奏</h2>
+<p>我会按“学习、实验、记录”三个动作推进。</p>
+<p>每周至少完成：</p>
+<ul>
+<li>1 个主题的系统化笔记</li>
+<li>1 次可复现实验或源码走读</li>
+<li>1 段 benchmark 或架构分析</li>
+<li>1 条可以沉淀到博客或 Obsidian 的总结</li>
+</ul>
+<p>时间不追求平均分配。推理基础和 vLLM 会多花时间，因为这是后面 RL 训练推理加速的地基。</p>
+<h2 id="最终输出物">最终输出物</h2>
+<p>这条路线最后要留下这些东西：</p>
+<ul>
+<li>一套 AI Infra Obsidian 知识库</li>
+<li>一组推理服务 benchmark 记录</li>
+<li>一个 RL 训练推理集群毕业项目</li>
+<li>一篇项目技术报告</li>
+<li>一套推理服务与 RL 训练推理面试题</li>
+<li>一份能讲清楚技术取舍的简历项目描述</li>
+</ul>
+<p>如果最后只剩“我看过很多资料”，那这条路线就失败了。真正有价值的是：我能把一个推理系统拆开，知道瓶颈在哪里，能部署，能测量，能优化，也能把这些取舍讲清楚。</p>
+
+    </div>
+  </article>
+</main>
+
+    <footer class="container footer">
+      <p>CodeMint · 编程学习与工程实践 · 2026</p>
+    </footer>
+    <script src="/assets/js/main.js"></script>
+  </body>
+</html>

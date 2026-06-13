@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+  <channel>
+    <title>CodeMint</title>
+    <link>https://sigmundming.dev/</link>
+    <description>写点自己真正在学、在用、在踩坑的东西：网络、系统、云原生，还有偶尔想明白的工程细节。</description>
+    <language>zh-CN</language>
+    
+      <item>
+        <title>我的 AI Infra 学习计划：从推理服务到 RL 训练推理加速</title>
+        <link>https://sigmundming.dev/posts/ai-infra-learning-plan/</link>
+        <guid>https://sigmundming.dev/posts/ai-infra-learning-plan/</guid>
+        <pubDate>Thu, 11 Jun 2026 00:00:00 GMT</pubDate>
+        <description>一条偏工程、偏系统的 AI Infra 学习路线：以推理服务为入口，逐步进入 vLLM、Ray、RLHF/GRPO 和集群部署。</description>
+      </item>
+    
+  </channel>
+</rss>
