@@ -856,8 +856,8 @@ h1 {
   }
 
   .nav-text-link {
-    width: 28px;
-    height: 28px;
+    width: 34px;
+    height: 34px;
     display: inline-grid;
     place-items: center;
     border: 0;
@@ -866,21 +866,21 @@ h1 {
   }
 
   .nav-icon-link {
-    width: 28px;
-    height: 28px;
+    width: 34px;
+    height: 34px;
     border-color: transparent;
   }
 
   .icon-button {
-    width: 28px;
-    height: 28px;
+    width: 34px;
+    height: 34px;
     border-color: transparent;
   }
 
   .nav-icon-link svg,
   .nav-text-link svg {
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
   }
 
   .nav-links a {
