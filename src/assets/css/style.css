@@ -842,18 +842,42 @@ h1 {
     width: 100%;
     flex-wrap: wrap;
     justify-content: flex-start;
-    row-gap: 6px;
-    gap: 12px;
+    row-gap: 5px;
+    gap: 8px;
   }
 
   .nav-text-link {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     display: inline-grid;
     place-items: center;
-    border: 1px solid var(--line);
+    border: 0;
     border-radius: 999px;
     padding: 0;
+  }
+
+  .nav-icon-link {
+    width: 28px;
+    height: 28px;
+    border-color: transparent;
+  }
+
+  .icon-button {
+    width: 28px;
+    height: 28px;
+    border-color: transparent;
+  }
+
+  .nav-icon-link svg,
+  .nav-text-link svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .nav-links a {
+    font-size: 0;
+    line-height: 1;
+    letter-spacing: 0;
   }
 
   .nav-links a {
@@ -878,12 +902,13 @@ h1 {
   }
 
   .brand-main {
-    font-size: 0.9rem;
+    font-size: 0.86rem;
   }
 
   .brand-by {
-    font-size: 0.58rem;
-    line-height: 1.2;
+    font-size: 0.54rem;
+    line-height: 1.1;
+    opacity: 0.82;
   }
 
   .nav-label {
@@ -902,10 +927,10 @@ h1 {
   }
 
   .nav-wrap {
-    gap: 10px;
+    gap: 8px;
     align-items: center;
     flex-wrap: wrap;
-    padding: 6px 0;
+    padding: 4px 0;
   }
 
   .tools-row,
