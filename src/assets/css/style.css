@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&display=swap");
+
 :root {
   --bg: #fbfaf7;
   --surface: #ffffff;
@@ -129,8 +131,34 @@ table {
 }
 
 .brand-main {
+  position: relative;
+  font-family: "Space Grotesk", "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-weight: 700;
+  letter-spacing: -0.03em;
   font-size: 1rem;
+  transform: translateY(-0.5px);
+  background: linear-gradient(120deg, #5f6773 0%, #8a99a8 58%, #5a7a97 100%);
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.brand-main::after {
+  content: "";
+  position: absolute;
+  left: 0.02em;
+  right: 0.02em;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--accent), transparent 88%);
+  opacity: 0.85;
+}
+
+[data-theme="dark"] .brand-main {
+  background: linear-gradient(120deg, #c8d5e3 0%, #8fb0d2 58%, #d2e2cf 100%);
+  text-shadow: none;
 }
 
 .brand-by {
