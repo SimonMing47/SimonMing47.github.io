@@ -40,14 +40,11 @@ body {
   color: var(--text);
   background-color: var(--bg);
   background-image:
-    linear-gradient(rgba(23, 23, 23, 0.042) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(23, 23, 23, 0.042) 1px, transparent 1px),
-    linear-gradient(rgba(23, 23, 23, 0.09) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(23, 23, 23, 0.09) 1px, transparent 1px),
-    linear-gradient(transparent 0 76%, rgba(23, 23, 23, 0.05) 76% 78%, transparent 78% 80%),
-    linear-gradient(90deg, transparent 0 76%, rgba(23, 23, 23, 0.05) 76% 78%, transparent 78% 80%);
-  background-size: 34px 34px, 34px 34px, 170px 170px, 170px 170px, 34px 34px, 34px 34px;
-  background-position: 0 0, 0 0, 0 0, 0 0, 0 0, 0 0;
+    linear-gradient(rgba(23, 23, 23, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(23, 23, 23, 0.04) 1px, transparent 1px),
+    linear-gradient(rgba(23, 23, 23, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(23, 23, 23, 0.07) 1px, transparent 1px);
+  background-size: 38px 38px, 38px 38px, 190px 190px, 190px 190px;
   min-height: 100vh;
   line-height: 1.65;
   overflow-x: hidden;
@@ -60,14 +57,11 @@ main {
 [data-theme="dark"] body {
   background-color: var(--bg);
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px),
-    linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px),
-    linear-gradient(transparent 0 76%, rgba(255, 255, 255, 0.035) 76% 78%, transparent 78% 80%),
-    linear-gradient(90deg, transparent 0 76%, rgba(255, 255, 255, 0.035) 76% 78%, transparent 78% 80%);
-  background-size: 34px 34px, 34px 34px, 170px 170px, 170px 170px, 34px 34px, 34px 34px;
-  background-position: 0 0, 0 0, 0 0, 0 0, 0 0, 0 0;
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 38px 38px, 38px 38px, 190px 190px, 190px 190px;
 }
 
 .ambient-layer {
