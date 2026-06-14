@@ -260,7 +260,9 @@ table {
   font-size: clamp(2.3rem, 9vw, 3.4rem);
   line-height: 1.02;
   letter-spacing: 0.02em;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   font-family: "Space Grotesk", "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-weight: 600;
   color: color-mix(in srgb, var(--text) 90%, #f5efe3 10%);
@@ -885,6 +887,12 @@ h4 {
   .hero {
     padding-top: 34px;
     min-height: auto;
+  }
+
+  .hero-title {
+    font-size: clamp(1.82rem, 11vw, 2.6rem);
+    line-height: 1.08;
+    letter-spacing: 0;
   }
 
   .hero-inner {
