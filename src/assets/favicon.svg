@@ -1,28 +1,28 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
   <title id="title">CodeMint</title>
-  <desc id="desc">CodeMint shiba inu icon</desc>
+  <desc id="desc">CodeMint Shiba Inu avatar logo</desc>
   <rect width="64" height="64" rx="15" fill="#0b1118" />
-  <circle cx="32" cy="32" r="18" fill="none" stroke="#86a6c8" stroke-width="1.8" opacity="0.55" />
+  <rect x="12" y="10" width="40" height="45" rx="18" fill="#f7f3ea" />
+  <path d="M24 13 14 16l-1 6 11-2 5 2 5-2 11 2-1-6-10-3-5 2-5-2z" fill="#f7f3ea" />
+  <path d="M18.5 22.5Q18 17 22.5 15l4 0" fill="none" stroke="#c8d4e2" stroke-width="2.4" stroke-linecap="round" />
+  <path d="M45.5 22.5Q46 17 41.5 15l-4 0" fill="none" stroke="#c8d4e2" stroke-width="2.4" stroke-linecap="round" />
 
-  <ellipse cx="32" cy="36" rx="15" ry="12" fill="#f7f0e3" />
-  <ellipse cx="32" cy="23" rx="11" ry="11" fill="#f7f0e3" />
+  <path d="M21 24c0-6.5 4.6-10.8 11-10.8S43 17.5 43 24" fill="#211d18" />
 
-  <path d="M23.5 23c0-4.7 3.5-8.5 8.5-8.5S40.5 18.3 40.5 23" fill="#1b262f" />
+  <ellipse cx="28" cy="31" rx="2.2" ry="2.6" fill="#3b4045" />
+  <ellipse cx="36" cy="31" rx="2.2" ry="2.6" fill="#3b4045" />
+  <circle cx="28" cy="31.1" r="0.85" fill="#f7f8fb" />
+  <circle cx="36" cy="31.1" r="0.85" fill="#f7f8fb" />
+  <path d="M31.2 34.4c0.6 0.8 2.1 0.8 2.8 0" fill="none" stroke="#292d32" stroke-width="1.05" stroke-linecap="round" />
+  <circle cx="27.9" cy="29.9" r="0.5" fill="#f7f8fb" />
+  <circle cx="35.9" cy="29.9" r="0.5" fill="#f7f8fb" />
 
-  <ellipse cx="28" cy="26" rx="2.5" ry="2.2" fill="#2d3843" />
-  <ellipse cx="36" cy="26" rx="2.5" ry="2.2" fill="#2d3843" />
-  <circle cx="28.5" cy="25.7" r="0.8" fill="#eff8ff" />
-  <circle cx="36.5" cy="25.7" r="0.8" fill="#eff8ff" />
+  <ellipse cx="27" cy="27" rx="1.4" ry="1.4" fill="#f3e3d2" />
+  <ellipse cx="37" cy="27" rx="1.4" ry="1.4" fill="#f3e3d2" />
 
-  <path d="M30.8 31.2c0.85 0.8 2.4 0.8 3.25 0" fill="none" stroke="#2d3843" stroke-width="1.1" stroke-linecap="round" />
+  <path d="M23 38h18" stroke="#d7d7d3" stroke-width="2.7" stroke-linecap="round" />
+  <path d="M24.8 38.5c1 1.2 2.8 1.6 4.2 1.1" fill="none" stroke="#d7d7d3" stroke-width="1.2" />
+  <path d="M35 38.5c-1 1.2-2.8 1.6-4.2 1.1" fill="none" stroke="#d7d7d3" stroke-width="1.2" />
 
-  <path d="M17.5 22.5c2-4.6 5.7-7.8 8.8-8.8" fill="none" stroke="#c7d9ef" stroke-width="1.5" stroke-linecap="round" opacity="0.8" />
-  <path d="M46.5 22.5c-2-4.6-5.7-7.8-8.8-8.8" fill="none" stroke="#c7d9ef" stroke-width="1.5" stroke-linecap="round" opacity="0.8" />
-
-  <path d="M24 30c-2.2 1.8-3.1 4.3-2.8 6.4h4.2" fill="#5f6f82" />
-  <path d="M40 30c2.2 1.8 3.1 4.3 2.8 6.4H38.6" fill="#5f6f82" />
-
-  <path d="M15 32c0 10.7 8.1 18.8 17 18.8S49 42.7 49 32" fill="none" stroke="#86a6c8" stroke-width="2.4" stroke-linecap="round" opacity="0.85" />
-
-  <path d="M22 44.5s4.7 2.8 10 2.8 10-2.8 10-2.8" fill="none" stroke="#6b7684" stroke-width="1.2" stroke-linecap="round" opacity="0.9" />
+  <path d="M19 47.4c4.2 5 12.1 6.6 13 6.6s8.8-1.7 13-6.6" fill="none" stroke="#86a6c8" stroke-width="2.2" stroke-linecap="round" opacity="0.8" />
 </svg>

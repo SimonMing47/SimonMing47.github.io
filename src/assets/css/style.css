@@ -115,6 +115,7 @@ table {
   align-items: center;
   gap: 8px;
   min-width: 0;
+  flex: 0 1 auto;
   color: var(--text);
   letter-spacing: 0;
 }
@@ -144,7 +145,6 @@ table {
 }
 
 .brand-main {
-  position: relative;
   white-space: normal;
   font-family: "Space Grotesk", "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-weight: 600;
@@ -152,17 +152,6 @@ table {
   font-size: 1.05rem;
   color: color-mix(in srgb, var(--text) 82%, var(--accent) 18%);
   overflow-wrap: anywhere;
-}
-
-.brand-main::after {
-  content: "";
-  position: absolute;
-  left: 0.02em;
-  right: 0.02em;
-  bottom: -1px;
-  height: 1px;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--text) 65%, var(--line) 35%), transparent 88%);
-  opacity: 0.85;
 }
 
 [data-theme="dark"] .brand-main {
@@ -269,18 +258,8 @@ table {
   word-break: break-word;
   font-family: "Space Grotesk", "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-weight: 600;
+  max-width: 100%;
   color: color-mix(in srgb, var(--text) 90%, #f5efe3 10%);
-}
-
-.hero-title::after {
-  content: "";
-  display: block;
-  width: 4.4ch;
-  height: 3px;
-  margin: 0.24em 0 0 auto;
-  border-radius: 999px;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 30%, transparent), color-mix(in srgb, var(--accent-2) 20%, transparent));
-  opacity: 0.7;
 }
 
 .hero-title + .sub-title {
