@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Great+Vibes&family=Space+Grotesk:wght@600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&display=swap");
 
 :root {
   --bg: #fbfaf7;
@@ -143,12 +143,11 @@ table {
 .brand-main {
   position: relative;
   white-space: nowrap;
-  font-family: "Great Vibes", "Space Grotesk", "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
-  font-weight: 400;
-  letter-spacing: 0.03em;
+  font-family: "Space Grotesk", "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   font-size: 1.05rem;
   color: color-mix(in srgb, var(--text) 82%, var(--accent) 18%);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 .brand-main::after {
@@ -163,7 +162,7 @@ table {
 }
 
 [data-theme="dark"] .brand-main {
-  text-shadow: none;
+  font-weight: 700;
 }
 
 .brand-by {
@@ -262,10 +261,9 @@ table {
   line-height: 1.02;
   letter-spacing: 0.02em;
   white-space: nowrap;
-  font-family: "Great Vibes", "Space Grotesk", "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
-  font-weight: 400;
+  font-family: "Space Grotesk", "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-weight: 600;
   color: color-mix(in srgb, var(--text) 90%, #f5efe3 10%);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 
 .hero-title::after {
