@@ -38,7 +38,10 @@ body {
   flex-direction: column;
   font-family: "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif;
   color: var(--text);
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image: linear-gradient(rgba(23, 23, 23, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(23, 23, 23, 0.05) 1px, transparent 1px);
+  background-size: 30px 30px;
   min-height: 100vh;
   line-height: 1.65;
   overflow-x: hidden;
@@ -49,11 +52,10 @@ main {
 }
 
 [data-theme="dark"] body {
-  background:
-    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
-    var(--bg);
-  background-size: 48px 48px, 48px 48px, auto;
+  background-color: var(--bg);
+  background-image: linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 30px 30px;
 }
 
 .ambient-layer {
@@ -213,7 +215,6 @@ table {
 
 .hero-copy {
   max-width: 760px;
-  animation: riseIn 0.7s ease both;
 }
 
 .eyebrow {
@@ -442,7 +443,6 @@ h1 {
 .post-block {
   padding: 22px 0 24px;
   border-top: 1px solid var(--line);
-  animation: riseIn 0.42s ease both;
 }
 
 .post-block:last-child {
@@ -516,7 +516,6 @@ h1 {
   grid-template-columns: 78px minmax(0, 1fr);
   gap: 24px;
   padding: 20px 0;
-  animation: riseIn 0.42s ease both;
 }
 
 .timeline-item::before {
@@ -604,26 +603,6 @@ h1 {
   margin-bottom: 40px;
   color: #8b95a7;
   font-size: 0.9rem;
-}
-
-@keyframes riseIn {
-  from {
-    opacity: 0;
-    transform: translateY(18px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes glassDrift {
-  from {
-    transform: translate3d(0, 0, 0) rotate(0deg);
-  }
-  to {
-    transform: translate3d(-18px, 16px, 0) rotate(10deg);
-  }
 }
 
 .post-page {
@@ -801,7 +780,6 @@ h1 {
 .bookmark-item:focus-visible {
   background: color-mix(in srgb, var(--surface-soft) 60%, transparent);
   color: var(--accent);
-  transform: translateX(2px);
 }
 
 .bookmark-item span {
