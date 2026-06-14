@@ -1,18 +1,28 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
   <title id="title">CodeMint</title>
-  <desc id="desc">CodeMint technical monogram logo</desc>
+  <desc id="desc">CodeMint shiba inu icon</desc>
   <rect width="64" height="64" rx="15" fill="#0b1118" />
-  <rect x="8" y="8" width="48" height="48" rx="12" fill="none" stroke="#9fb4cc" stroke-width="2.4" opacity="0.58" />
-  <rect x="15" y="11" width="34" height="42" rx="10" fill="none" stroke="#5c6f88" stroke-width="1.9" opacity="0.38" />
-  <text
-    x="32"
-    y="40"
-    text-anchor="middle"
-    font-family="SFMono-Regular, Menlo, Monaco, Consolas, monospace"
-    font-size="28"
-    font-weight="700"
-    letter-spacing="-2"
-    fill="#e8f1ff"
-  >CM</text>
-  <path d="M16 46h32" stroke="#86a6c8" stroke-width="2" stroke-linecap="round" opacity="0.7" />
+  <circle cx="32" cy="32" r="18" fill="none" stroke="#86a6c8" stroke-width="1.8" opacity="0.55" />
+
+  <ellipse cx="32" cy="36" rx="15" ry="12" fill="#f7f0e3" />
+  <ellipse cx="32" cy="23" rx="11" ry="11" fill="#f7f0e3" />
+
+  <path d="M23.5 23c0-4.7 3.5-8.5 8.5-8.5S40.5 18.3 40.5 23" fill="#1b262f" />
+
+  <ellipse cx="28" cy="26" rx="2.5" ry="2.2" fill="#2d3843" />
+  <ellipse cx="36" cy="26" rx="2.5" ry="2.2" fill="#2d3843" />
+  <circle cx="28.5" cy="25.7" r="0.8" fill="#eff8ff" />
+  <circle cx="36.5" cy="25.7" r="0.8" fill="#eff8ff" />
+
+  <path d="M30.8 31.2c0.85 0.8 2.4 0.8 3.25 0" fill="none" stroke="#2d3843" stroke-width="1.1" stroke-linecap="round" />
+
+  <path d="M17.5 22.5c2-4.6 5.7-7.8 8.8-8.8" fill="none" stroke="#c7d9ef" stroke-width="1.5" stroke-linecap="round" opacity="0.8" />
+  <path d="M46.5 22.5c-2-4.6-5.7-7.8-8.8-8.8" fill="none" stroke="#c7d9ef" stroke-width="1.5" stroke-linecap="round" opacity="0.8" />
+
+  <path d="M24 30c-2.2 1.8-3.1 4.3-2.8 6.4h4.2" fill="#5f6f82" />
+  <path d="M40 30c2.2 1.8 3.1 4.3 2.8 6.4H38.6" fill="#5f6f82" />
+
+  <path d="M15 32c0 10.7 8.1 18.8 17 18.8S49 42.7 49 32" fill="none" stroke="#86a6c8" stroke-width="2.4" stroke-linecap="round" opacity="0.85" />
+
+  <path d="M22 44.5s4.7 2.8 10 2.8 10-2.8 10-2.8" fill="none" stroke="#6b7684" stroke-width="1.2" stroke-linecap="round" opacity="0.9" />
 </svg>
