@@ -114,6 +114,7 @@ table {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
   color: var(--text);
   letter-spacing: 0;
 }
@@ -138,16 +139,19 @@ table {
   display: grid;
   gap: 1px;
   line-height: 1.05;
+  min-width: 0;
+  max-width: min(260px, calc(100vw - 320px));
 }
 
 .brand-main {
   position: relative;
-  white-space: nowrap;
+  white-space: normal;
   font-family: "Space Grotesk", "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-weight: 600;
   letter-spacing: 0.01em;
   font-size: 1.05rem;
   color: color-mix(in srgb, var(--text) 82%, var(--accent) 18%);
+  overflow-wrap: anywhere;
 }
 
 .brand-main::after {
