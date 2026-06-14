@@ -784,6 +784,9 @@ h1 {
   padding: 18px 0;
   border-top: 1px solid var(--line-dark);
   transition: color 0.2s, transform 0.2s;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .bookmark-item:first-child {
@@ -804,6 +807,7 @@ h1 {
 .bookmark-item span {
   color: var(--text);
   font-weight: 700;
+  min-width: 0;
 }
 
 .bookmark-item strong {
@@ -811,11 +815,16 @@ h1 {
   font-family: "SF Mono", "Fira Code", "Consolas", "Courier New", monospace;
   font-size: 0.92rem;
   font-weight: 500;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .bookmark-item p {
   margin: 0;
   color: var(--muted);
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 700px) {
@@ -998,8 +1007,24 @@ h1 {
   }
 
   .bookmark-item {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "name"
+      "domain"
+      "desc";
     gap: 6px;
     padding: 16px 0;
+  }
+
+  .bookmark-item span {
+    grid-area: name;
+  }
+
+  .bookmark-item strong {
+    grid-area: domain;
+  }
+
+  .bookmark-item p {
+    grid-area: desc;
   }
 }
