@@ -80,6 +80,12 @@
         "url": "https://learn.deeplearning.ai/courses/fast-and-efficient-llm-inference-with-vllm/lesson/rm60gb/introduction",
         "domain": "DeepLearning.AI × Red Hat",
         "description": "免费实操课程：LLM Compressor 压缩模型 → vLLM 部署推理服务 → GuideLLM 基准测试，覆盖推理全生命周期。"
+      },
+      {
+        "name": "vLLM 源码解析",
+        "url": "https://vllm-book.myhubs.dev/",
+        "domain": "vllm-book.myhubs.dev",
+        "description": "vLLM 推理引擎源码级深度剖析：PagedAttention 内存管理、Continuous Batching 调度、分布式推理、量化优化，22 章全覆盖"
       }
     ]
   },
