@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+  <channel>
+    <title>CodeMint</title>
+    <link>https://sigmundming.dev/</link>
+    <description>写点自己真正在学、在用、在踩坑的东西：网络、系统、云原生，还有偶尔想明白的工程细节。</description>
+    <language>zh-CN</language>
+    
+      <item>
+        <title>KV Cache 小白解析</title>
+        <link>https://sigmundming.dev/posts/kv-cache-beginner-guide/</link>
+        <guid>https://sigmundming.dev/posts/kv-cache-beginner-guide/</guid>
+        <pubDate>Mon, 29 Jun 2026 00:00:00 GMT</pubDate>
+        <description>用一个最直观的角度理解 LLM 推理里最关键的提速手段：KV Cache。</description>
+      </item>
+    
+  </channel>
+</rss>

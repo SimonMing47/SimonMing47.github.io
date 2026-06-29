@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>KV Cache 小白解析</title>
+    <meta name="description" content="用一个最直观的角度理解 LLM 推理里最关键的提速手段：KV Cache。" />
+    <meta name="author" content="SimonMing47" />
+    <meta name="keywords" content="编程学习, 工程实践, 技术博客, 系统设计, 开发工具, 技术复盘, JavaScript, GitHub Pages" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="theme-color" content="#080b10" />
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg?v=2" />
+    <link rel="shortcut icon" href="/assets/favicon.svg?v=2" />
+    <link rel="apple-touch-icon" href="/assets/favicon.svg?v=2" />
+    <link rel="canonical" href="https://sigmundming.dev/posts/kv-cache-beginner-guide/" />
+    <meta property="og:title" content="KV Cache 小白解析" />
+    <meta property="og:description" content="用一个最直观的角度理解 LLM 推理里最关键的提速手段：KV Cache。" />
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://sigmundming.dev/posts/kv-cache-beginner-guide/" />
+    <meta property="og:site_name" content="CodeMint" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta property="og:image" content="https://sigmundming.dev/assets/og-image.svg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="CodeMint 技术博客封面" />
+    
+      <meta property="article:author" content="SimonMing47" />
+      <meta property="article:published_time" content="2026-06-29T00:00:00.000Z" />
+      
+        
+          <meta property="article:tag" content="AI Infra" />
+        
+          <meta property="article:tag" content="Transformer" />
+        
+          <meta property="article:tag" content="推理优化" />
+        
+          <meta property="article:tag" content="分布式系统" />
+        
+      
+    
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="KV Cache 小白解析" />
+    <meta name="twitter:description" content="用一个最直观的角度理解 LLM 推理里最关键的提速手段：KV Cache。" />
+    <meta name="twitter:image" content="https://sigmundming.dev/assets/og-image.svg" />
+    <meta name="twitter:image:alt" content="CodeMint 技术博客封面" />
+    <link rel="alternate" type="application/rss+xml" title="CodeMint RSS" href="/rss.xml" />
+    <link rel="stylesheet" href="/assets/css/style.css" />
+    
+      <script type="application/ld+json">
+        {
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "KV Cache 小白解析",
+  "description": "用一个最直观的角度理解 LLM 推理里最关键的提速手段：KV Cache。",
+  "url": "https://sigmundming.dev/posts/kv-cache-beginner-guide/",
+  "datePublished": "2026-06-29T00:00:00.000Z",
+  "dateModified": "2026-06-29T00:00:00.000Z",
+  "author": {
+    "@type": "Person",
+    "name": "SimonMing47"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "SimonMing47"
+  },
+  "image": "https://sigmundming.dev/assets/og-image.svg",
+  "mainEntityOfPage": "https://sigmundming.dev/posts/kv-cache-beginner-guide/"
+}
+      </script>
+    
+  </head>
+  <body>
+    <div class="ambient-layer" aria-hidden="true"></div>
+    <header class="site-header">
+      <div class="container nav-wrap">
+        <a class="brand" href="/" aria-label="CodeMint 首页">
+          <img src="/assets/favicon.svg" alt="" aria-hidden="true" />
+          <span class="brand-text">
+            <span class="brand-main">CodeMint</span>
+            <span class="brand-by">by Sigmund Ming</span>
+          </span>
+        </a>
+        <nav class="nav-links" aria-label="主导航">
+          <a class="nav-text-link" href="/#latest">
+            <span class="nav-label">文章</span>
+            <span class="nav-mobile-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M4 5.5h16a1.5 1.5 0 0 1 0 3H4a1.5 1.5 0 0 1 0-3Zm0 5h16a1.5 1.5 0 0 1 0 3H4a1.5 1.5 0 0 1 0-3Zm0 5h10.5a1.5 1.5 0 0 1 0 3H4a1.5 1.5 0 0 1 0-3Z" /></svg>
+            </span>
+          </a>
+          <a class="nav-text-link" href="/bookmarks/">
+            <span class="nav-label">收藏夹</span>
+            <span class="nav-mobile-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M6.75 3A2.75 2.75 0 0 0 4 5.75v14.5A1.5 1.5 0 0 0 5.5 22h12a.75.75 0 0 0 .75-.75V6.5L12 3 5.75 6.5V4.5a1.25 1.25 0 0 1 2.5 0v9.19l1.5-.85V4.25h2.5V13l1.5-.85V4.25h2.5V12.4l1.5-.85V4.25h2.5v12.5H16a.75.75 0 0 0-.75.75V21H5.5A1 1 0 0 1 4.5 20V5.75A1.25 1.25 0 0 1 5.75 4.5H6a.75.75 0 0 0 0 1.5H5.75" /></svg>
+            </span>
+          </a>
+          <a class="nav-text-link" href="/rss.xml">
+            <span class="nav-label">RSS</span>
+            <span class="nav-mobile-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M4.5 5.5A1.5 1.5 0 0 0 3 7v.5A8.5 8.5 0 0 1 11.5 16H12a1.5 1.5 0 0 0 0-3 5 5 0 0 1-5-5V7.5A1.5 1.5 0 0 0 4.5 5.5Zm0 6a1.5 1.5 0 0 0-1.5 1.5V13A5.5 5.5 0 0 1 8 18.5h.5a1.5 1.5 0 0 0 0-3H8a2.5 2.5 0 0 1-2.5-2.5V13A1.5 1.5 0 0 0 4.5 11.5Zm1.75 8A1.75 1.75 0 1 0 8 21.25 1.75 1.75 0 0 0 6.25 19.5Z" /></svg>
+            </span>
+          </a>
+          <a class="nav-text-link" href="/about/">
+            <span class="nav-label">关于</span>
+            <span class="nav-mobile-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 4.5A7.5 7.5 0 1 0 19.5 12 7.5 7.5 0 0 0 12 4.5Zm-1.5 7.75V9.25a1.5 1.5 0 1 1 3 0v2.25a1.5 1.5 0 0 1-1.5 1.5h-1.75v1.5h3a1.5 1.5 0 1 1 0 3h-.75v.75a1.5 1.5 0 0 1-3 0V16h-.75a4.25 4.25 0 0 1 0-8.5H12a1.5 1.5 0 1 1 0 3h-1.5v-1.75Z" /></svg>
+            </span>
+          </a>
+          <a class="nav-icon-link" href="https://github.com/SimonMing47" target="_blank" rel="noreferrer noopener" aria-label="GitHub" title="GitHub">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56v-2.17c-3.2.7-3.87-1.36-3.87-1.36-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.03 1.75 2.69 1.24 3.34.95.1-.74.4-1.24.73-1.53-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.28 1.18-3.09-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.16 1.18A10.94 10.94 0 0 1 12 6c.98 0 1.95.13 2.87.39 2.19-1.49 3.15-1.18 3.15-1.18.63 1.58.23 2.75.11 3.04.74.81 1.18 1.83 1.18 3.09 0 4.42-2.69 5.39-5.26 5.68.41.36.78 1.06.78 2.14v3.18c0 .31.21.67.8.56A11.52 11.52 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z" />
+            </svg>
+          </a>
+          <a class="nav-icon-link" href="mailto:mingxing.tc@gmail.com" aria-label="Email" title="Email">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4.75 5.75h14.5c.97 0 1.75.78 1.75 1.75v9c0 .97-.78 1.75-1.75 1.75H4.75A1.75 1.75 0 0 1 3 16.5v-9c0-.97.78-1.75 1.75-1.75Zm.04 1.5 7.21 5.06 7.21-5.06H4.79Zm14.71 1.63-7.07 4.96a.75.75 0 0 1-.86 0L4.5 8.88v7.62c0 .14.11.25.25.25h14.5c.14 0 .25-.11.25-.25V8.88Z" />
+            </svg>
+          </a>
+          <button class="icon-button" id="theme-toggle" type="button" aria-label="切换主题" title="切换主题">◐</button>
+        </nav>
+      </div>
+    </header>
+    <main class="container post-page">
+  <a class="back-link" href="/">← 返回列表</a>
+  <article class="article-card">
+    <p class="eyebrow">2026年6月29日 · 9 min</p>
+    <h1>KV Cache 小白解析</h1>
+    
+      <div class="tag-row" aria-label="文章标签">
+        
+          <span class="tag">AI Infra</span>
+        
+          <span class="tag">Transformer</span>
+        
+          <span class="tag">推理优化</span>
+        
+          <span class="tag">分布式系统</span>
+        
+      </div>
+    
+    
+    
+      <details class="toc-box" open>
+        <summary>Table of contents</summary>
+        <ol>
+          
+            <li class="toc-level-2">
+              <a href="#1-先把问题说清楚-大模型推理为什么慢">1. 先把问题说清楚：大模型推理为什么慢？</a>
+            </li>
+          
+            <li class="toc-level-2">
+              <a href="#2-transformer-注意力里-真正复用的是什么">2. Transformer 注意力里，真正复用的是什么？</a>
+            </li>
+          
+            <li class="toc-level-2">
+              <a href="#3-一个-可视化-理解">3. 一个“可视化”理解</a>
+            </li>
+          
+            <li class="toc-level-2">
+              <a href="#4-一个很重要的边界-prompt-cache-和-kv-cache-不是一回事">4. 一个很重要的边界：Prompt Cache 和 KV Cache 不是一回事</a>
+            </li>
+          
+            <li class="toc-level-2">
+              <a href="#5-为什么有时候还是慢">5. 为什么有时候还是慢？</a>
+            </li>
+          
+            <li class="toc-level-2">
+              <a href="#6-pagedattention-和-kv-cache-的关系-入门版">6. PagedAttention 和 KV Cache 的关系（入门版）</a>
+            </li>
+          
+            <li class="toc-level-2">
+              <a href="#7-工程上如何判断你-真的用了-kv-cache">7. 工程上如何判断你“真的用了”KV Cache？</a>
+            </li>
+          
+            <li class="toc-level-2">
+              <a href="#8-小结">8. 小结</a>
+            </li>
+          
+        </ol>
+      </details>
+    
+    <div class="article-body">
+      <p>第一次接触 LLM 推理优化时，大家会先听到一个词：</p>
+<p><strong>KV Cache</strong>。</p>
+<p>它听起来很玄乎，但本质是非常朴素的一件事：</p>
+<blockquote>
+<p>不要把已经算过的东西重复算。把可复用的“中间结果”先记下来。</p>
+</blockquote>
+<p>本篇用最少公式、尽量白话，解释它是什么、为什么有用、什么时候会“掉速”。</p>
+<h2 id="1-先把问题说清楚-大模型推理为什么慢">1. 先把问题说清楚：大模型推理为什么慢？</h2>
+<p>给模型发一句话，模型在第一个 token 出来之前，会做两个阶段：</p>
+<ul>
+<li><strong>prefill（预填充）</strong>：把完整输入（prompt）一次性喂进去，计算每一层每个 token 的注意力。</li>
+<li><strong>decode（解码）</strong>：逐 token 继续生成。</li>
+</ul>
+<p>慢主要不在“会不会算”，而在“有多少重复计算”。</p>
+<p>如果你每次都把相同上下文从头算一遍，长上下文下开销会很快膨胀。</p>
+<h2 id="2-transformer-注意力里-真正复用的是什么">2. Transformer 注意力里，真正复用的是什么？</h2>
+<p>在解码每一步，模型会用到历史 token 之间的注意力信息。</p>
+<p>这部分历史相关信息里，核心可以拆成两类：</p>
+<ul>
+<li><strong>Key（K）</strong></li>
+<li><strong>Value（V）</strong></li>
+</ul>
+<p>每层每个头都会算一堆 K/V。它们本身不依赖“当前要预测的新 token”，而是依赖历史上下文。也就是说，前面已经算出来的 K/V 可以继续用。<code>KV Cache</code> 就是在这一步做“缓存”。</p>
+<h2 id="3-一个-可视化-理解">3. 一个“可视化”理解</h2>
+<p>把一次解码想成“接力”：</p>
+<ul>
+<li>第 1 次生成 token 时，你要把所有上下文都处理一遍；</li>
+<li>第 2 次生成 token 时，如果不缓存，就又要处理一次前面的上下文。</li>
+</ul>
+<p>有了 KV Cache：</p>
+<ul>
+<li>本轮新算出来的 K/V 只加到缓存末尾；</li>
+<li>已有的旧 K/V 直接复用；</li>
+<li>每步计算规模基本从“越来越大”变成“基本稳定增长”。</li>
+</ul>
+<p>这就是为什么 decode 阶段可以明显提速、稳定 throughput 的核心机制之一。</p>
+<h2 id="4-一个很重要的边界-prompt-cache-和-kv-cache-不是一回事">4. 一个很重要的边界：Prompt Cache 和 KV Cache 不是一回事</h2>
+<ul>
+<li><strong>KV Cache</strong>：<code>每层注意力</code> 中间结果的缓存，核心在解码时复用历史 token。</li>
+<li><strong>Prompt Cache</strong>（不同系统里叫法不同）：更偏“请求级”或“会话级”对同一段 prompt 的额外命中优化。</li>
+</ul>
+<p>它们可能协同，但职责不同：</p>
+<ul>
+<li>KV Cache 解决“时间序列上重复用历史”。</li>
+<li>Prompt 类优化解决“多个请求共享同一段上下文”。</li>
+</ul>
+<h2 id="5-为什么有时候还是慢">5. 为什么有时候还是慢？</h2>
+<p>KV Cache 能加速，但不是所有情况下都神奇：</p>
+<ul>
+<li><strong>并发高且长度长</strong>：缓存本身要占显存，内存压力会限制 batch 与序列长度。</li>
+<li><strong>上下文频繁变化</strong>：一旦上下文切换频繁，缓存命中率下降。</li>
+<li><strong>参数配置不合适</strong>：一些调度器在高并发场景下为了公平与延迟可能触发频繁切片。</li>
+</ul>
+<p>这也是很多服务里要做 batch/scheduler/分页策略的原因：</p>
+<blockquote>
+<p>你优化的不是单一算子，而是“算力利用 + 显存 + 延迟”三者的平衡。</p>
+</blockquote>
+<h2 id="6-pagedattention-和-kv-cache-的关系-入门版">6. PagedAttention 和 KV Cache 的关系（入门版）</h2>
+<p>很多同学在看 vLLM 时会看到 <strong>PagedAttention</strong>。</p>
+<p>它可以理解为对 KV Cache 的“内存管理增强”：</p>
+<ul>
+<li>把传统连续 KV 存储改为“分页”组织；</li>
+<li>提升显存碎片利用率；</li>
+<li>在高并发下更容易回收与扩缩。</li>
+</ul>
+<p>你可以把它想成：KV Cache 是概念，PagedAttention 是“把这个概念跑快、跑稳”的工程实现策略。</p>
+<h2 id="7-工程上如何判断你-真的用了-kv-cache">7. 工程上如何判断你“真的用了”KV Cache？</h2>
+<p>观察这几类指标：</p>
+<ul>
+<li>单 token 的 decode time 是否随上下文长度线性持续变慢；</li>
+<li>GPU 利用率是否因为反复算 K/V 下降；</li>
+<li>相同 batch/sequence 下，第一轮与后续轮次的耗时差异。</li>
+</ul>
+<p>如果你看到后续轮次显著更低，说明缓存链路在发挥作用。</p>
+<h2 id="8-小结">8. 小结</h2>
+<p>如果你只记一条：</p>
+<p><strong>KV Cache 的价值，不在于“算法技巧”，而在于“减少重复计算的工程认知”。</strong></p>
+<p>对 AI Infra 来说，后面你会很快接触到：</p>
+<ul>
+<li>Scheduler 如何打包请求</li>
+<li>连续解码如何影响吞吐</li>
+<li>显存页管理如何影响稳定性</li>
+<li>什么时候 tradeoff 延迟，什么时候 tradeoff 吞吐</li>
+</ul>
+<p>这些问题的入口，几乎都从 KV Cache 能否被有效维护开始。</p>
+<p>我会在下一篇把它和 PagedAttention 的内存块组织细节再往下打磨一版，尽量用一张图配清晰的例子来讲。</p>
+
+    </div>
+  </article>
+</main>
+
+    <footer class="container footer">
+      <p>CodeMint · 编程学习与工程实践 · 2026</p>
+    </footer>
+    <script src="/assets/js/main.js"></script>
+  </body>
+</html>
