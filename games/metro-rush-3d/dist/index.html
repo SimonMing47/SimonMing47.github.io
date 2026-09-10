@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101b25">
+  <meta name="description" content="地铁疾跑：在城市轨道间换道、跳跃、滑铲，收集金币，挑战你的跑酷纪录。">
+  <title>METRO RUSH · 地铁疾跑</title>
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main id="app" data-state="menu">
+    <canvas id="world" aria-label="3D 地铁跑酷场景"></canvas>
+    <div class="vignette" aria-hidden="true"></div>
+    <header class="topbar">
+      <a class="wordmark" href="./" aria-label="地铁疾跑首页"><span class="brand-symbol" aria-hidden="true">M</span><span>METRO<span class="wordmark-light">RUSH</span><small>地铁疾跑</small></span></a>
+      <div class="top-actions">
+        <button id="sound" class="icon-button" aria-label="开启音效" aria-pressed="false" title="音效"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path id="sound-waves" d="m16 9 5 6m0-6-5 6"/></svg></button>
+        <button id="pause" class="icon-button" aria-label="暂停游戏" title="暂停 / P" hidden><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></button>
+      </div>
+    </header>
+    <section class="hud" id="hud" aria-label="当前成绩" hidden>
+      <div class="distance"><span class="hud-label">奔跑距离</span><strong id="distance">0</strong><span class="unit">m</span></div>
+      <div class="coin-counter"><span class="coin-dot" aria-hidden="true">◆</span><strong id="coins">0</strong></div>
+      <div class="pace"><span id="zone">中央车站</span><span id="speed">72 km/h</span></div>
+    </section>
+    <section class="menu-panel" id="menu" aria-labelledby="game-title">
+      <div class="eyebrow"><span></span>城市轨道 · 无尽挑战</div>
+      <h1 id="game-title">METRO<br><em>RUSH</em><span class="title-period">.</span></h1>
+      <p class="chinese-title">地铁疾跑</p>
+      <p class="intro">穿过车站，跃过障碍。<br>下一段纪录，由你刷新。</p>
+      <button class="primary-button" id="start"><span>即刻开跑</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 12h16m-6-6 6 6-6 6"/></svg></button>
+      <div class="best-label"><span>个人最佳</span><strong id="best">0</strong><span>m</span></div>
+    </section>
+    <div class="scene-caption" id="scene-caption"><span>01 / CENTRAL STATION</span><strong>中央车站</strong><small>黄昏时分，出发。</small></div>
+    <aside class="controls-guide" id="controls-guide" aria-label="操作说明">
+      <span class="guide-heading">操作指南</span>
+      <div><kbd>←</kbd><kbd>→</kbd><span>切换轨道</span></div>
+      <div><kbd>↑</kbd><span>跳跃</span></div>
+      <div><kbd>↓</kbd><span>滑铲</span></div>
+      <span class="touch-hint">手机：上下左右滑动屏幕</span>
+    </aside>
+    <div id="toast" role="status" class="toast"></div>
+    <div id="power" class="power" hidden><span id="power-label">磁铁吸附</span><span class="power-track"><span id="power-fill"></span></span></div>
+    <div id="touch-controls" class="touch-controls" aria-label="触屏操作" hidden>
+      <button data-action="left" aria-label="向左换道">←</button><button data-action="slide" aria-label="滑铲">↓</button><button data-action="jump" aria-label="跳跃">↑</button><button data-action="right" aria-label="向右换道">→</button>
+    </div>
+    <section id="overlay" class="overlay" aria-modal="true" role="dialog" aria-labelledby="overlay-title" hidden>
+      <div class="result-panel">
+        <span class="eyebrow" id="result-eyebrow">TAKE A BREATHER</span>
+        <h2 id="overlay-title">歇一口气</h2>
+        <p id="overlay-message">轨道在等你，准备好就继续。</p>
+        <div id="result-stats" class="result-stats" hidden><div><span>本次距离</span><strong id="result-distance">0<small> m</small></strong></div><div><span>收集金币</span><strong id="result-coins">0</strong></div><div><span>本次得分</span><strong id="result-score">0</strong></div></div>
+        <button id="resume" class="primary-button">继续奔跑 <span aria-hidden="true">→</span></button>
+        <button id="home" class="text-button">返回起点</button>
+      </div>
+    </section>
+    <div id="error" class="error-panel" role="alert" hidden><h2>暂时无法启动 3D 场景</h2><p id="error-text">请使用支持 WebGL 2 的浏览器，并启用硬件加速。</p><button class="primary-button" onclick="location.reload()">重新加载</button></div>
+    <noscript><div class="error-panel"><h2>请启用 JavaScript 后开始游戏</h2></div></noscript>
+  </main>
+  <script type="module" src="./game.js"></script>
+</body>
+</html>
