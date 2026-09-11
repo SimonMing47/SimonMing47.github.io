@@ -1,3 +1,7 @@
+import { multiply, transform } from './math.js';
+export { multiply, transform } from './math.js';
+import { RunnerCharacter } from './character.js';
+import { roundedBoxGeometry, smoothSphereGeometry, torsoGeometry } from './character-geometry.js';
 import { LANE_WIDTH, randomSource, BONUSES, pickupPose, TRACK } from './engine.js';
 
 const vertexSource = `#version 300 es
@@ -32,15 +36,6 @@ out vec4 outColor;
 uniform float uTunnelBlend;
 void main(){outColor=vec4(mix(vColor,mix(vec3(0.61,0.72,0.79),vec3(0.075,0.14,0.21),uTunnelBlend),vFog),1.0);}`;
 
-export function multiply(a,b){
-  const out = new Float32Array(16);
-  for(let c=0;c<4;c++) for(let r=0;r<4;r++) out[c*4+r]=a[r]*b[c*4]+a[4+r]*b[c*4+1]+a[8+r]*b[c*4+2]+a[12+r]*b[c*4+3];
-  return out;
-}
-export function transform(x=0,y=0,z=0,sx=1,sy=1,sz=1,rx=0,ry=0,rz=0){
-  const a=Math.cos(rx),b=Math.sin(rx),c=Math.cos(ry),d=Math.sin(ry),e=Math.cos(rz),f=Math.sin(rz);
-  return new Float32Array([c*e*sx,c*f*sx,-d*sx,0,(b*d*e-a*f)*sy,(b*d*f+a*e)*sy,b*c*sy,0,(a*d*e+b*f)*sz,(a*d*f-b*e)*sz,a*c*sz,0,x,y,z,1]);
-}
 function perspective(fov,aspect,near,far){const f=1/Math.tan(fov/2),n=1/(near-far);return new Float32Array([f/aspect,0,0,0,0,f,0,0,0,0,(far+near)*n,-1,0,0,2*far*near*n,0]);}
 function lookAt(eye,at){
   const normalize=v=>{const n=Math.hypot(...v);return v.map(x=>x/n);};
@@ -75,8 +70,8 @@ function sphereGeometry(){
 const colorCache=new Map();
 function color(hex,glow=0){if(!colorCache.has(hex))colorCache.set(hex,[parseInt(hex.slice(1,3),16)/255,parseInt(hex.slice(3,5),16)/255,parseInt(hex.slice(5,7),16)/255]);return [...colorCache.get(hex),glow];}
 class Batch {
-  constructor(gl,vertices){
-    this.gl=gl;this.count=0;this.max=14000;this.data=new Float32Array(this.max*20);this.vertices=vertices.length/6;
+  constructor(gl,vertices,max=14000){
+    this.gl=gl;this.count=0;this.max=max;this.data=new Float32Array(this.max*20);this.vertices=vertices.length/6;
     this.vao=gl.createVertexArray();gl.bindVertexArray(this.vao);
     this.vertexBuffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,this.vertexBuffer);gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.STATIC_DRAW);
     gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,3,gl.FLOAT,false,24,0);
@@ -102,6 +97,8 @@ export class WorldRenderer {
     gl.linkProgram(this.program);if(!gl.getProgramParameter(this.program,gl.LINK_STATUS))throw new Error('3D 场景着色器连接失败。');
     gl.enable(gl.DEPTH_TEST);gl.enable(gl.CULL_FACE);gl.clearColor(0,0,0,0);
     this.cubes=new Batch(gl,cubeGeometry());this.cylinders=new Batch(gl,cylinderGeometry());this.spheres=new Batch(gl,sphereGeometry());
+    this.characterBatches={rounded:new Batch(gl,roundedBoxGeometry(),256),smooth:new Batch(gl,smoothSphereGeometry(),256),torso:new Batch(gl,torsoGeometry(),8)};
+    this.character=new RunnerCharacter();
     this.viewUniform=gl.getUniformLocation(this.program,'uViewProjection');this.eyeUniform=gl.getUniformLocation(this.program,'uCamera');
     this.tunnelBoundsUniform=gl.getUniformLocation(this.program,'uTunnelBounds');this.tunnelBlendUniform=gl.getUniformLocation(this.program,'uTunnelBlend');
     this.camX=0;this.camHeight=0;this.demoDistance=0;this.particles=[];this.visualTime=0;this.shake=0;this.reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -134,8 +131,7 @@ export class WorldRenderer {
       box(x+side*1.19,1.69,z,.025,1.94,.035,'#3d737a');
     }
     box(x,3.22,z,2.18,.16,8.8,'#bacac4');
-    if(roofRoute){for(const side of [-1,1])box(x+side*.96,3.31,z,.07,.018,8.8,'#ffda7d',0,0,0,.4);}
-    else box(x,3.25,z-1.8,1.18,.08,1.8,'#7e9599');
+    if(!roofRoute)box(x,3.25,z-1.8,1.18,.08,1.8,'#7e9599');
   }
   obstacle(o){
     if(o.broken)return;
@@ -168,51 +164,14 @@ export class WorldRenderer {
       box(x-.09,2.20,z+.25,.1,.24,.03,'#6b4c37',0,0,-.7);box(x+.09,2.20,z+.25,.1,.24,.03,'#6b4c37',0,0,.7);
     }
   }
-  player(e,t,menu){
-    const run=e.mode==='running',phase=e.distance*1.05;
-    const bouncing=run&&e.grounded&&e.slide===0?Math.abs(Math.sin(phase))*.065:Math.sin(t*2)*.022;
-    const crouch=e.slide>0;const lean=(e.lane*LANE_WIDTH-e.x)*-.15;
+  characterPart(kind,matrix,c,glow=0){this.characterBatches[kind].add(matrix,color(c,glow));}
+  resetCharacter(){this.character.reset();}
+  handleEvent(event){this.character.handleEvent(event);}
+  player(e,t,menu,dt){
+    const pose=this.character.draw(this,e,dt,this.reduceMotion);
     const flying=e.jetpack>0||e.landing;
-    const riderHeight=e.board>0&&!flying?.16:0;
-    const base=transform(menu?0:e.x,e.y+bouncing+riderHeight,2.5,1,1,1,crouch?-1.06:flying?.12:0,menu?-.5:0,crouch?0:lean);
-    const local=(x,y,z,w,h,d,c,rx=0,ry=0,rz=0)=>this.box(x,y,z,w,h,d,c,rx,ry,rz,0,base);
-    // The articulated runner is built in 3D, including cap, headphones and a backpack.
-    const waist=crouch?.61:1.02;
-    local(0,waist+.35,0,.67,.76,.44,'#35aaa9');
-    local(0,waist-.07,0,.57,.23,.38,'#234659');
-    local(0,waist+.58,.251,.53,.14,.07,'#e5dcc7');
-    local(0,waist+.26,.35,.48,.55,.26,'#e5984a');
-    local(0,waist+.26,.496,.3,.12,.07,'#ffcb69');
-    local(-.21,waist+.48,.31,.055,.6,.08,'#263f4e');local(.21,waist+.48,.31,.055,.6,.08,'#263f4e');
-    this.sphere(0,waist+.91,0,.49,.51,.47,'#efbd94',0,base);
-    local(0,waist+1.15,.015,.48,.16,.5,'#efb449');
-    local(0,waist+1.09,-.22,.49,.055,.38,'#edb13f');
-    local(0,waist+.97,.223,.28,.18,.04,'#3b322e');
-    for(const side of [-1,1]){
-      local(side*.249,waist+.89,.015,.085,.23,.18,'#edbc59');
-      const swing=run&&!flying&&e.board<=0?Math.sin(phase+ (side===1?Math.PI:0))*.75:Math.sin(t*1.7)*.04;
-      const hip=multiply(base,transform(side*.17,waist-.12,0,1,1,1,crouch?-.85:!e.grounded?side*.32:swing));
-      this.box(0,-.24,0,.235,.49,.29,'#274c62',0,0,0,0,hip);
-      const knee=multiply(hip,transform(0,-.45,0,1,1,1,crouch?1.7:!e.grounded?.6:Math.max(0,-swing)*.9));
-      this.box(0,-.2,0,.215,.4,.25,'#203d51',0,0,0,0,knee);
-      this.box(0,-.38,-.085,.28,.17,.47,e.sneakers>0?'#94ff78':'#f2c75c',0,0,0,e.sneakers>0?.65:0,knee);
-      this.box(0,-.48,-.085,.29,.055,.48,'#f2ead4',0,0,0,0,knee);
-      const shoulder=multiply(base,transform(side*.44,waist+.58,0,1,1,1,crouch?-1.5:-swing*.85,0,side*-.1));
-      this.box(0,-.18,0,.21,.4,.24,'#31a19f',0,0,0,0,shoulder);
-      const elbow=multiply(shoulder,transform(0,-.36,0,1,1,1,-.7));
-      this.box(0,-.13,0,.19,.29,.22,'#37aba7',0,0,0,0,elbow);
-      this.box(0,-.32,0,.19,.17,.21,'#e8b388',0,0,0,0,elbow);
-    }
-    if(e.jetpack>0){
-      for(const s of [-1,1]){
-        local(s*.25,waist+.28,.43,.25,.77,.3,'#699eea');
-        this.cylinder(s*.25,waist-.08,.43,.19,.19,.12,'#94dcff',Math.PI/2,0,0,1,base);
-        this.box(s*.25,waist-.39,.43,.12,.46+Math.sin(t*42)*.13,.12,'#b4efff',0,0,0,1,base);
-        this.box(s*.25,waist-.63,.43,.075,.26,.075,'#ffe4a5',0,0,0,1,base);
-      }
-    }
     if(e.board>0&&!flying){
-      const board=transform(e.x,e.y+.12,2.5,1,1,1,0,-.08,lean);
+      const board=transform(e.x,e.y+.12/Math.cos(pose.boardPitch),2.5,1,1,1,pose.boardPitch);
       this.box(0,0,0,.8,.1,1.38,'#7760cb',0,0,0,.25,board);
       this.cylinder(0,0,-.64,.8,.44,.1,'#987aff',Math.PI/2,0,0,.4,board);
       this.cylinder(0,0,.64,.8,.44,.1,'#987aff',Math.PI/2,0,0,.4,board);
@@ -227,8 +186,9 @@ export class WorldRenderer {
         this.box(e.x+Math.sin(a)*r,e.y+.1+ring*.15,2.5+Math.cos(a)*r,.045,.04,.26,ring?'#f58fcb':'#ffe0f2',0,a,0,1);
       }
       for(let i=0;i<6;i++){const a=t*2+i*Math.PI/3;this.sphere(e.x+Math.cos(a)*.9,target.y+Math.sin(a*2)*.35,2.5+Math.sin(a)*.85,.11,.11,.11,'#ffaad6',1);}
-      for(const side of [-1,1]){this.box(e.x+.72+side*.16,e.y+2.23,2.6,.13,.43,.13,'#f783ba',0,0,0,.8);this.box(e.x+.72+side*.16,e.y+2.4,2.6,.14,.13,.14,'#fff0fa',0,0,0,1);}
-      this.box(e.x+.72,e.y+2.01,2.6,.45,.13,.13,'#f783ba',0,0,0,.8);
+      const magnetY=e.y+.36+(1-pose.low)*1.26;
+      for(const side of [-1,1]){this.box(e.x+.56+side*.10,magnetY,2.6,.085,.27,.085,'#f783ba',0,0,0,.8);this.box(e.x+.56+side*.10,magnetY+.10,2.6,.09,.08,.09,'#fff0fa',0,0,0,1);}
+      this.box(e.x+.56,magnetY-.13,2.6,.285,.085,.085,'#f783ba',0,0,0,.8);
     }
     if(e.invulnerable>0){for(const s of [-1,1])this.box(e.x+s*.6,e.y+1,2.5,.028,1.6,.025,'#d2efff',0,0,0,1);}
     const shadow=1-Math.min((e.y-e.floorHeight)/6,.3);this.cylinder(menu?0:e.x,(menu?0:e.floorHeight)+.01,2.55,.95*shadow,1.1*shadow,.008,'#21363d',Math.PI/2,0,0,.2);
@@ -318,7 +278,7 @@ export class WorldRenderer {
         if(i%2===0){this.box(s*6.6,.77,z-4,1.45,.2,2.8,'#476c72');this.box(s*7.16,1.08,z-4,.19,.7,2.8,'#537c81');for(const a of [-1,1])this.box(s*6.6,.53,z-4+a,.95,.48,.18,'#345967');}
       }
     }
-    // A repeated canopy and catenary frame make the track read as a metro station.
+    // Repeated station canopies frame the track without lines crossing the roofs.
     for(let i=0;i<6;i++){
       const z=12-i*43+(distance%43);if(underground(z))continue;
       for(const s of [-1,1]){
@@ -336,7 +296,6 @@ export class WorldRenderer {
       this.box(6.3,4.68,z-3.4,1.65,.79,.13,'#244956');
       this.box(6.3,4.73,z-3.32,1.18,.1,.02,'#edca78',0,0,0,.3);
     }
-    for(const x of [-2.7,0,2.7])this.box(x,7.56,-85,.024,.024,240,'#344b59');
     for(const b of this.buildings){
       const z=((b.z+distance*.52+250)%250)-230,x=b.x*b.side;
       this.box(x,b.h/2-1,z,b.w,b.h,b.d,b.tone);
@@ -359,6 +318,7 @@ export class WorldRenderer {
     if(menu&&!this.reduceMotion)this.demoDistance+=dt*3.3;
     const distance=menu?this.demoDistance:e.distance;
     this.resize();this.cubes.count=0;this.cylinders.count=0;this.spheres.count=0;
+    for(const batch of Object.values(this.characterBatches))batch.count=0;
     this.scenery(distance,t,menu?[{start:60+distance,end:150+distance}]:e.tunnels);
     if(!menu)for(const section of e.tunnels)this.tunnelSection(section,distance);
     if(menu){
@@ -380,7 +340,7 @@ export class WorldRenderer {
         }else this.bonus(p,t);
       }
     }
-    this.player(e,t,menu);
+    this.player(e,t,menu,dt);
     for(const p of this.particles){if(moving){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy-=8*dt;p.z+=p.vz*dt;}const s=Math.max(.001,p.life*.15);this.box(p.x,p.y,p.z,s,s,s,p.color,t,t,0,1);}
     this.particles=this.particles.filter(p=>p.life>0);
     const mobile=this.canvas.clientWidth<760;
@@ -395,7 +355,7 @@ export class WorldRenderer {
     const vp=multiply(perspective((mobile?66:57)*Math.PI/180,this.canvas.width/this.canvas.height,.1,300),lookAt(eye,at));
     const gl=this.gl;const tunnel=menu?{start:60+distance,end:150+distance}:e.tunnels.find(s=>s.end>distance-15&&s.start<distance+210);
     gl.useProgram(this.program);gl.uniform2fv(this.tunnelBoundsUniform,tunnel?[2.5-tunnel.end+distance,2.5-tunnel.start+distance]:[-10000,-9999]);gl.uniform1f(this.tunnelBlendUniform,menu?0:e.tunnelBlend);
-    gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(this.program);gl.uniformMatrix4fv(this.viewUniform,false,vp);gl.uniform3fv(this.eyeUniform,eye);this.cubes.draw();this.cylinders.draw();this.spheres.draw();gl.bindVertexArray(null);
+    gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(this.program);gl.uniformMatrix4fv(this.viewUniform,false,vp);gl.uniform3fv(this.eyeUniform,eye);this.cubes.draw();this.cylinders.draw();this.spheres.draw();for(const batch of Object.values(this.characterBatches))batch.draw();gl.bindVertexArray(null);
   }
-  dispose(){this.cubes.dispose();this.cylinders.dispose();this.spheres.dispose();this.gl.deleteProgram(this.program);}
+  dispose(){this.cubes.dispose();this.cylinders.dispose();this.spheres.dispose();for(const batch of Object.values(this.characterBatches))batch.dispose();this.gl.deleteProgram(this.program);}
 }

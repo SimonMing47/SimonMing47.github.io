@@ -106,7 +106,7 @@ function syncUI(){
 }
 function startRun(){
   if(stopped||!renderer||(engine.mode!=='menu'&&engine.mode!=='over'))return false;
-  unlockAudio();engine.reset(undefined,difficulty);engine.start();renderer.particles=[];accumulator=0;lastTap=0;
+  unlockAudio();engine.reset(undefined,difficulty);engine.start();renderer.resetCharacter();renderer.particles=[];accumulator=0;lastTap=0;
   clearTimeout(toastTimer);clearTimeout(noticeTimer);$('bonus-notice').classList.remove('visible');$('toast').classList.remove('visible');syncUI();$('pause').focus({preventScroll:true});
   toast(`${engine.config.name}模式 · ${engine.boardCharges} 块滑板已就绪`,2200);return true;
 }
@@ -124,10 +124,10 @@ function showGameOver(){
   const complete=engine.missions.filter(m=>m.done).length;$('result-reward').textContent=`完成挑战 ${complete}/3 · 滑板护身 ${engine.savedCrashes} 次 · 奖励分 +${format(engine.stats.bonusPoints)}`;
   $('resume').textContent='再跑一次 ↗';renderer.shake=1;syncUI();$('resume').focus({preventScroll:true});
 }
-function goHome(){engine.reset(undefined,difficulty);accumulator=0;renderer.particles=[];clearTimeout(toastTimer);clearTimeout(noticeTimer);$('bonus-notice').classList.remove('visible');$('toast').classList.remove('visible');updateMenu();syncUI();$('start').focus({preventScroll:true});}
+function goHome(){engine.reset(undefined,difficulty);renderer.resetCharacter();accumulator=0;renderer.particles=[];clearTimeout(toastTimer);clearTimeout(noticeTimer);$('bonus-notice').classList.remove('visible');$('toast').classList.remove('visible');updateMenu();syncUI();$('start').focus({preventScroll:true});}
 function events(){
   for(const e of engine.drainEvents()){
-    tone(e.type);if(e.type==='coin')renderer.burst(e);
+    renderer.handleEvent(e);tone(e.type);if(e.type==='coin')renderer.burst(e);
     if(['magnet','double','sneakers','jetpack','board'].includes(e.type))announceBonus(e.type,e.duration);
     if(e.type==='boardPickup')toast('获得护航滑板 · 按 B / 双击启用');
     if(e.type==='shieldBreak'){renderer.shake=.6;toast('滑板已护身 · 继续冲刺！');}
