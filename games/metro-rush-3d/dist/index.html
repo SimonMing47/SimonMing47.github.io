@@ -3,62 +3,64 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#101b25">
-  <meta name="description" content="地铁疾跑：在城市轨道间换道、跳跃、滑铲，收集金币，挑战你的跑酷纪录。">
+  <meta name="theme-color" content="#142438">
+  <meta name="description" content="三档难度、六种奖励，冲进城市轨道。METRO RUSH 原创 3D 跑酷游戏。">
   <title>METRO RUSH · 地铁疾跑</title>
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <main id="app" data-state="menu">
-    <canvas id="world" aria-label="3D 地铁跑酷场景"></canvas>
-    <div class="vignette" aria-hidden="true"></div>
-    <header class="topbar">
-      <a class="wordmark" href="./" aria-label="地铁疾跑首页"><span class="brand-symbol" aria-hidden="true">M</span><span>METRO<span class="wordmark-light">RUSH</span><small>地铁疾跑</small></span></a>
-      <div class="top-actions">
-        <button id="sound" class="icon-button" aria-label="开启音效" aria-pressed="false" title="音效"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path id="sound-waves" d="m16 9 5 6m0-6-5 6"/></svg></button>
-        <button id="pause" class="icon-button" aria-label="暂停游戏" title="暂停 / P" hidden><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></button>
-      </div>
-    </header>
-    <section class="hud" id="hud" aria-label="当前成绩" hidden>
-      <div class="distance"><span class="hud-label">奔跑距离</span><strong id="distance">0</strong><span class="unit">m</span></div>
-      <div class="coin-counter"><span class="coin-dot" aria-hidden="true">◆</span><strong id="coins">0</strong></div>
-      <div class="pace"><span id="zone">中央车站</span><span id="speed">72 km/h</span></div>
-    </section>
-    <section class="menu-panel" id="menu" aria-labelledby="game-title">
-      <div class="eyebrow"><span></span>城市轨道 · 无尽挑战</div>
-      <h1 id="game-title">METRO<br><em>RUSH</em><span class="title-period">.</span></h1>
-      <p class="chinese-title">地铁疾跑</p>
-      <p class="intro">穿过车站，跃过障碍。<br>下一段纪录，由你刷新。</p>
-      <button class="primary-button" id="start"><span>即刻开跑</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 12h16m-6-6 6 6-6 6"/></svg></button>
-      <div class="best-label"><span>个人最佳</span><strong id="best">0</strong><span>m</span></div>
-    </section>
-    <div class="scene-caption" id="scene-caption"><span>01 / CENTRAL STATION</span><strong>中央车站</strong><small>黄昏时分，出发。</small></div>
-    <aside class="controls-guide" id="controls-guide" aria-label="操作说明">
-      <span class="guide-heading">操作指南</span>
-      <div><kbd>←</kbd><kbd>→</kbd><span>切换轨道</span></div>
-      <div><kbd>↑</kbd><span>跳跃</span></div>
-      <div><kbd>↓</kbd><span>滑铲</span></div>
-      <span class="touch-hint">手机：上下左右滑动屏幕</span>
-    </aside>
-    <div id="toast" role="status" class="toast"></div>
-    <div id="power" class="power" hidden><span id="power-label">磁铁吸附</span><span class="power-track"><span id="power-fill"></span></span></div>
-    <div id="touch-controls" class="touch-controls" aria-label="触屏操作" hidden>
-      <button data-action="left" aria-label="向左换道">←</button><button data-action="slide" aria-label="滑铲">↓</button><button data-action="jump" aria-label="跳跃">↑</button><button data-action="right" aria-label="向右换道">→</button>
+<main id="app" data-state="menu" data-difficulty="classic">
+  <canvas id="world" aria-label="3D 地铁跑酷场景"></canvas>
+  <div class="vignette" aria-hidden="true"></div>
+  <header class="topbar">
+    <a class="wordmark" href="./" aria-label="地铁疾跑首页"><span class="brand-symbol" aria-hidden="true">M</span><span class="brand-name">METRO RUSH<small>地铁疾跑</small></span></a>
+    <div class="top-actions">
+      <span class="mode-badge" id="mode-badge">经典 · FLOW</span>
+      <button id="guide" class="icon-button" aria-label="道具和操作指南" title="道具和操作指南">?</button>
+      <button id="sound" class="icon-button" aria-label="开启音效" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path id="sound-waves" d="m16 9 5 6m0-6-5 6"/></svg></button>
+      <button id="pause" class="icon-button" aria-label="暂停游戏" title="暂停 / P" hidden><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></button>
     </div>
-    <section id="overlay" class="overlay" aria-modal="true" role="dialog" aria-labelledby="overlay-title" hidden>
-      <div class="result-panel">
-        <span class="eyebrow" id="result-eyebrow">TAKE A BREATHER</span>
-        <h2 id="overlay-title">歇一口气</h2>
-        <p id="overlay-message">轨道在等你，准备好就继续。</p>
-        <div id="result-stats" class="result-stats" hidden><div><span>本次距离</span><strong id="result-distance">0<small> m</small></strong></div><div><span>收集金币</span><strong id="result-coins">0</strong></div><div><span>本次得分</span><strong id="result-score">0</strong></div></div>
-        <button id="resume" class="primary-button">继续奔跑 <span aria-hidden="true">→</span></button>
-        <button id="home" class="text-button">返回起点</button>
-      </div>
-    </section>
-    <div id="error" class="error-panel" role="alert" hidden><h2>暂时无法启动 3D 场景</h2><p id="error-text">请使用支持 WebGL 2 的浏览器，并启用硬件加速。</p><button class="primary-button" onclick="location.reload()">重新加载</button></div>
-    <noscript><div class="error-panel"><h2>请启用 JavaScript 后开始游戏</h2></div></noscript>
-  </main>
-  <script type="module" src="./game.js"></script>
-</body>
-</html>
+  </header>
+  <section class="hud" id="hud" aria-label="当前成绩" hidden>
+    <div class="score-block"><span class="hud-label">本次得分</span><div><strong id="score">0</strong><span class="multiplier" id="multiplier">×1.5</span></div><span class="distance-line"><b id="distance">0</b> m <i></i><span id="speed">65 km/h</span></span></div>
+    <div class="collect-block"><div><span class="coin-symbol" aria-hidden="true">◆</span><strong id="coins">0</strong></div><span>最高分 <b id="hud-best">0</b></span></div>
+    <div class="stage-block"><div><span id="zone">LV.1 热身起跑</span><span id="next-stage">下一等级 600 m</span></div><span class="stage-track"><span id="stage-fill"></span></span></div>
+  </section>
+  <section id="menu" aria-labelledby="game-title">
+    <div class="title-lockup"><span class="edition-label"><i></i> CITY RUN / 02</span><h1 id="game-title">METRO<br><em>RUSH<span>.</span></em></h1><p>你的下一程，不止是跑得更远。</p></div>
+    <div class="launch-panel">
+      <div class="section-top"><h2>选择你的节奏</h2><span>SELECT MODE</span></div>
+      <fieldset class="difficulty-options" id="difficulties"><legend class="sr-only">选择难度</legend>
+        <label class="difficulty-card" data-mode="casual"><input type="radio" name="difficulty" value="casual"><span class="mode-rank">I</span><strong>休闲</strong><small>CHILL</small><span class="mode-rate">×1 积分</span></label>
+        <label class="difficulty-card selected" data-mode="classic"><input type="radio" name="difficulty" value="classic" checked><span class="mode-rank">II</span><strong>经典</strong><small>FLOW</small><span class="mode-rate">×1.5 积分</span></label>
+        <label class="difficulty-card" data-mode="expert"><input type="radio" name="difficulty" value="expert"><span class="mode-rank">III</span><strong>极限</strong><small>RUSH</small><span class="mode-rate">×2 积分</span></label>
+      </fieldset>
+      <div class="difficulty-description"><p id="difficulty-hint">交错障碍，畅快连招</p><span id="difficulty-speed">65 → 122 km/h</span></div>
+      <button class="primary-button" id="start"><span>开跑！<small>LET'S RUSH</small></span><span class="button-arrow" aria-hidden="true">↗</span></button>
+      <div class="best-strip"><span>本难度纪录</span><strong id="best">0</strong><span>分</span><span class="best-distance"><b id="best-distance">0</b> m</span></div>
+    </div>
+  </section>
+  <aside class="bonus-dock" id="bonus-dock" aria-label="奖励图鉴">
+    <div class="section-top"><h2>让这一程更精彩</h2><span>BONUS DROP</span></div>
+    <div class="bonus-grid" id="bonus-grid"></div>
+    <div class="bonus-tip"><span class="tip-spark">✦</span><p>不同道具可以同时生效<br><strong>20 / 40 连币，解锁额外倍率</strong></p></div>
+  </aside>
+  <aside class="controls-guide" id="controls-guide" aria-label="操作说明"><span><kbd>←</kbd><kbd>→</kbd> 换道</span><span><kbd>↑</kbd> 跳跃</span><span><kbd>↓</kbd> 滑铲</span><span><kbd>B</kbd> 滑板</span><span class="touch-hint">手机滑动操作 · 双击启动滑板</span></aside>
+  <div id="toast" role="status" class="toast"></div>
+  <div id="combo-panel" class="combo-panel" hidden><strong id="combo-count">0</strong><span>COIN COMBO</span><b id="combo-label">连续收集</b><span class="combo-track"><i id="combo-fill"></i></span></div>
+  <aside id="mission-panel" class="mission-panel" hidden><span class="mission-tag">本局挑战</span><div><strong id="mission-name">收集 50 枚金币</strong><b id="mission-reward">+500 分</b></div><span class="mission-track"><i id="mission-fill"></i></span><span id="mission-progress">0 / 50</span></aside>
+  <div id="power-bar" class="power-bar" aria-label="生效中的道具" hidden></div>
+  <button id="board-action" class="board-action" hidden aria-label="使用护航滑板"><span aria-hidden="true">▱</span><div><strong>护航滑板</strong><small id="board-hint">按 B 使用</small></div><b id="board-count">1</b></button>
+  <div id="touch-controls" class="touch-controls" aria-label="触屏操作" hidden><button data-action="left" aria-label="向左换道">←</button><button data-action="slide" aria-label="滑铲">↓</button><button data-action="jump" aria-label="跳跃">↑</button><button data-action="right" aria-label="向右换道">→</button></div>
+  <section id="overlay" class="overlay" aria-modal="true" role="dialog" aria-labelledby="overlay-title" hidden><div class="result-panel">
+    <span class="eyebrow" id="result-eyebrow">TAKE A BREATHER</span><h2 id="overlay-title">歇一口气</h2><p id="overlay-message">轨道在等你，准备好就继续。</p>
+    <div id="result-stats" hidden><div class="result-score"><span>本次得分</span><strong id="result-score">0</strong><span id="result-mode">经典 · 基础倍率 ×1.5</span></div><div class="result-grid"><div><span>奔跑距离</span><strong id="result-distance">0 m</strong></div><div><span>收集金币</span><strong id="result-coins">0</strong></div><div><span>最高连币</span><strong id="result-combo">0</strong></div><div><span>道具拾取</span><strong id="result-bonuses">0</strong></div></div><div class="result-reward" id="result-reward"></div></div>
+    <button id="resume" class="primary-button">继续奔跑 →</button><button id="home" class="text-button">返回起点 · 调整难度</button>
+  </div></section>
+  <dialog id="bonus-guide" class="guide-dialog" aria-labelledby="guide-title"><div class="guide-dialog-top"><div><span class="eyebrow">RUN SMARTER</span><h2 id="guide-title">掌握你的奖励</h2></div><button id="close-guide" class="icon-button" aria-label="关闭指南">×</button></div><div class="guide-list" id="guide-list"></div><div class="guide-notes"><p><b>连币加成</b>　20 连 ×1.5，40 连 ×2；与难度和双倍积分相乘。</p><p><b>本局挑战</b>　50 金币 +500 分，800 米 +800 分，3 道具 +600 分。</p><p><b>操作</b>　方向键 / WASD 换道、跳跃、滑铲；空格跳跃；B / 手机双击启用滑板；P / Esc 暂停。</p><p>同类道具刷新时长；休闲时长 +25%，极限时长 −15%。飞行结束安全落地，滑板抵挡一次碰撞后消耗。</p></div></dialog>
+  <div id="error" class="error-panel" role="alert" hidden><h2>暂时无法启动 3D 场景</h2><p id="error-text">请使用支持 WebGL 2 的浏览器，并启用硬件加速。</p><button class="primary-button" onclick="location.reload()">重新加载</button></div>
+  <noscript><div class="error-panel"><h2>请启用 JavaScript 后开始游戏</h2></div></noscript>
+</main>
+<script type="module" src="./game.js"></script>
+</body></html>

@@ -1,103 +1,181 @@
-/** Pure, deterministic gameplay. Coordinates: x is lateral; ahead is metres in front. */
+/** Deterministic gameplay. x is lateral; ahead is metres in front of the runner. */
 export const LANE_WIDTH = 2.7;
-export const PHYSICS = Object.freeze({ gravity: 28, jumpVelocity: 11.4, slideDuration: .8, startSpeed: 20, maxSpeed: 36 });
-export const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-export function randomSource(seed = Date.now()) {
-  let s = seed >>> 0;
-  return () => { s += 0x6D2B79F5; let t = s; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; };
-}
+export const PHYSICS = Object.freeze({ gravity: 28, jumpVelocity: 11.4, superJumpVelocity: 16.2, slideDuration: .8, startSpeed: 18, maxSpeed: 34 });
+export const DIFFICULTIES = Object.freeze({
+  casual: Object.freeze({ name:'休闲', english:'CHILL', startSpeed:14, maxSpeed:24, acceleration:.004, gap:44, minGap:34, multiplier:1, firstRow:70, stageLength:500, bonusScale:1.25, boards:2, comboWindow:3.2, hint:'宽松轨道，轻松练习', color:'#60efd2' }),
+  classic: Object.freeze({ name:'经典', english:'FLOW', startSpeed:18, maxSpeed:34, acceleration:.006, gap:36, minGap:28, multiplier:1.5, firstRow:60, stageLength:600, bonusScale:1, boards:1, comboWindow:2.7, hint:'交错障碍，畅快连招', color:'#ffc85a' }),
+  expert: Object.freeze({ name:'极限', english:'RUSH', startSpeed:23, maxSpeed:42, acceleration:.008, gap:31, minGap:26, multiplier:2, firstRow:56, stageLength:500, bonusScale:.85, boards:1, comboWindow:2.2, hint:'高速密集，挑战反应', color:'#f595bf' })
+});
+export const BONUSES = Object.freeze({
+  magnet: { name:'金币磁铁', short:'磁铁', glyph:'U', color:'#f17cb0', duration:10, description:'自动吸附附近三条轨道的金币。' },
+  double: { name:'双倍积分', short:'双倍', glyph:'×2', color:'#ffd35f', duration:12, description:'期间获得的跑酷积分翻倍，挑战固定奖励除外。' },
+  sneakers: { name:'超级跳跃', short:'弹跳', glyph:'↑↑', color:'#92ed76', duration:10, description:'跳得更高，可跃过列车；落地前仍需留意障碍。' },
+  jetpack: { name:'喷气背包', short:'飞行', glyph:'↑', color:'#6ccfff', duration:7, description:'自动升空避开障碍，左右移动收集空中金币。' },
+  board: { name:'护航滑板', short:'滑板', glyph:'▱', color:'#b699ff', duration:15, description:'拾取补充 1 块。按 B 或双击屏幕使用，抵挡一次碰撞。' },
+  mystery: { name:'神秘礼盒', short:'礼盒', glyph:'?', color:'#ffad6e', duration:0, description:'随机获得金币、道具或一块护航滑板。' }
+});
+export const STAGES = ['热身起跑','穿梭街区','疾速换线','高能追逐','极限冲刺'];
+export const clamp = (v,lo,hi) => Math.max(lo,Math.min(hi,v));
+export function randomSource(seed=Date.now()) { let s=seed>>>0; return ()=>{s+=0x6D2B79F5;let t=s;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296;}; }
 export class RunnerEngine {
-  constructor(seed) { this.reset(seed); }
-  reset(seed = Date.now()) {
-    this.random = randomSource(seed); this.seed = seed; this.mode = 'menu';
-    this.distance = 0; this.time = 0; this.speed = PHYSICS.startSpeed;
-    this.lane = 0; this.x = 0; this.y = 0; this.vy = 0; this.slide = 0;
-    this.coins = 0; this.score = 0; this.magnet = 0; this.obstacles = []; this.pickups = [];
-    this.events = []; this.nextRow = 58; this.rows = 0; this.id = 0; this.lastMilestone = 0;
-    this.reason = ''; this.nextSafeLane = 0;
-    for (let p = 10; p < 44; p += 3) this.pickups.push(this.item('coin', 0, p));
+  constructor(seed,difficulty='classic') { this.reset(seed,difficulty); }
+  reset(seed=Date.now(),difficulty=this.difficulty||'classic') {
+    if(!Object.hasOwn(DIFFICULTIES,difficulty)) throw new Error('Unknown difficulty');
+    this.difficulty=difficulty;this.config=DIFFICULTIES[difficulty];this.random=randomSource(seed);this.seed=seed;this.mode='menu';
+    this.distance=0;this.time=0;this.speed=this.config.startSpeed;this.stage=1;this.stageProgress=0;
+    this.lane=0;this.x=0;this.y=0;this.vy=0;this.slide=0;this.coins=0;this.score=0;this.points=0;
+    this.magnet=0;this.double=0;this.sneakers=0;this.jetpack=0;this.board=0;this.invulnerable=0;this.landing=false;
+    this.boardCharges=this.config.boards;this.boardsUsed=0;this.savedCrashes=0;
+    this.combo=0;this.maxCombo=0;this.comboTimer=0;this.bonusCount=0;this.bonusCoins=0;
+    this.stats={ coinPoints:0,distancePoints:0,bonusPoints:0,nearMisses:0 };
+    this.obstacles=[];this.pickups=[];this.events=[];this.rows=0;this.id=0;this.reason='';this.nextSafeLane=0;
+    this.nextRow=this.config.firstRow;this.lastMilestone=0;this.nextAirCoin=0;this.bonusBag=[];
+    this.missions=[{id:'coins',name:'收集 50 枚金币',target:50,progress:0,reward:500,done:false},{id:'distance',name:'跑过 800 米',target:800,progress:0,reward:800,done:false},{id:'bonus',name:'拾取 3 个道具',target:3,progress:0,reward:600,done:false}];
+    for(let p=10;p<this.config.firstRow-17;p+=3)this.pickups.push(this.item('coin',0,p));
     this.populate();
   }
-  item(type, lane, ahead, y = .95) { return { id: ++this.id, type, lane, ahead, y }; }
-  start() { if (this.mode !== 'menu') return false; this.mode = 'running'; return true; }
-  pause() { if (this.mode !== 'running') return false; this.mode = 'paused'; return true; }
-  resume() { if (this.mode !== 'paused') return false; this.mode = 'running'; return true; }
-  action(action) {
-    if (this.mode !== 'running') return false;
-    if (action === 'left' || action === 'right') {
-      const next = clamp(this.lane + (action === 'left' ? -1 : 1), -1, 1);
-      if (next === this.lane) return false;
-      this.lane = next; this.events.push({type: 'move'}); return true;
+  item(type,lane,ahead,y=.95) { return {id:++this.id,type,lane,ahead,y}; }
+  start(){if(this.mode!=='menu')return false;this.mode='running';return true;}
+  pause(){if(this.mode!=='running')return false;this.mode='paused';return true;}
+  resume(){if(this.mode!=='paused')return false;this.mode='running';return true;}
+  get comboMultiplier(){return this.combo>=40?2:this.combo>=20?1.5:1;}
+  get multiplier(){return this.config.multiplier*this.comboMultiplier*(this.double>0?2:1);}
+  action(action){
+    if(this.mode!=='running')return false;
+    if(action==='left'||action==='right'){
+      const lane=clamp(this.lane+(action==='left'?-1:1),-1,1);if(lane===this.lane)return false;
+      this.lane=lane;this.events.push({type:'move'});return true;
     }
-    if (action === 'jump' && this.y < .02 && this.vy <= 0) {
-      this.slide = 0; this.vy = PHYSICS.jumpVelocity; this.events.push({ type: 'jump' }); return true;
+    if(action==='board'){
+      if(this.board>0||this.boardCharges<=0||this.jetpack>0||this.landing)return false;
+      this.boardCharges--;this.board=BONUSES.board.duration*this.config.bonusScale;this.boardsUsed++;
+      this.events.push({type:'board',duration:this.board});return true;
     }
-    if (action === 'slide') {
-      if (this.y > .02) { this.vy = Math.min(this.vy, -16); this.events.push({type: 'drop'}); }
-      else { this.slide = PHYSICS.slideDuration; this.events.push({type: 'slide'}); }
-      return true;
+    if(action==='jump'&&this.y<.02&&this.vy<=0&&this.jetpack<=0&&!this.landing){
+      this.slide=0;this.vy=this.sneakers>0?PHYSICS.superJumpVelocity:PHYSICS.jumpVelocity;
+      this.events.push({type:'jump'});return true;
     }
-    return false;
+    if(action==='slide'&&this.jetpack<=0&&!this.landing){
+      if(this.y>.02){this.vy=Math.min(this.vy,-16);this.events.push({type:'drop'});}
+      else{this.slide=PHYSICS.slideDuration;this.events.push({type:'slide'});}return true;
+    }return false;
   }
-  populate() {
-    while (this.nextRow - this.distance < 170) {
-      const row = this.rows++;
-      const ahead = this.nextRow - this.distance;
-      // Every row has a fully open lane. Adjacent rows leave at least 0.82 s at top speed.
-      const safeLane = row === 0 ? -1 : Math.floor(this.random() * 3) - 1;
-      const blocked = [-1, 0, 1].filter(lane => lane !== safeLane);
-      for (const lane of blocked) {
-        let type;
-        if (row === 0) type = lane === 0 ? 'barrier' : 'train';
-        else if (row === 1) type = lane === 0 ? 'gate' : 'train';
-        else { const r = this.random(); type = r < .36 ? 'train' : r < .69 ? 'barrier' : 'gate'; }
-        this.obstacles.push({ ...this.item(type, lane, ahead, 0), halfLength: type === 'train' ? 4.4 : .65, passed: false, row });
-        if (type === 'barrier') for (let i = -2; i <= 2; i++) this.pickups.push(this.item('coin', lane, ahead + i * 2, 1.3 + (2 - Math.abs(i)) * .62));
+  nextBonus(){
+    if(!this.bonusBag.length){this.bonusBag=Object.keys(BONUSES);for(let i=this.bonusBag.length-1;i>0;i--){const j=Math.floor(this.random()*(i+1));[this.bonusBag[i],this.bonusBag[j]]=[this.bonusBag[j],this.bonusBag[i]];}}
+    return this.bonusBag.pop();
+  }
+  populate(){
+    while(this.nextRow-this.distance<180){
+      const row=this.rows++,world=this.nextRow,ahead=world-this.distance;
+      const stage=Math.min(5,1+Math.floor(world/this.config.stageLength));
+      // Safe corridors move at most one lane between rows, including at the speed cap.
+      const choices=[-1,0,1].filter(l=>Math.abs(l-this.nextSafeLane)<=1);
+      const safe=row===0?-1:choices[Math.floor(this.random()*choices.length)];
+      const lanes=[-1,0,1].filter(l=>l!==safe);
+      const light=this.difficulty==='casual'&&(row<4||this.random()<.58);
+      if(light)lanes.splice(Math.floor(this.random()*2),1);
+      for(let n=0;n<lanes.length;n++){
+        const lane=lanes[n];let type;
+        if(row===0)type=lane===0?'barrier':'train';
+        else if(this.difficulty==='casual'&&row<3)type='barrier';
+        else {const patterns=[['train','barrier'],['gate','barrier'],['barrier','barrier'],['train','gate'],['gate','gate'],['train','train']];type=patterns[(row+stage-1)%patterns.length][n];}
+        this.obstacles.push({...this.item(type,lane,ahead,0),halfLength:type==='train'?4.4:.65,row,passed:false,broken:false});
+        if(type==='barrier'&&row%2===0)for(let i=-2;i<=2;i++)this.pickups.push(this.item('coin',lane,ahead+i*2,1.3+(2-Math.abs(i))*.62));
       }
-      for (let j = -9; j <= 9; j += 3) this.pickups.push(this.item('coin', safeLane, ahead + j));
-      if (row > 1 && row % 5 === 3) this.pickups.push(this.item('magnet', safeLane, ahead - 14, 1.2));
-      this.nextSafeLane = safeLane;
-      this.nextRow += 32 + this.random() * 9;
+      const coinCount=row%6===4?13:9;const spacing=row%6===4?1.7:2.5;
+      for(let i=0;i<coinCount;i++)this.pickups.push(this.item('coin',safe,ahead+(i-(coinCount-1)/2)*spacing));
+      if(row%2===0)this.pickups.push(this.item(this.nextBonus(),safe,ahead-15,1.15));
+      this.nextSafeLane=safe;
+      const estimatedSpeed=Math.min(this.config.maxSpeed,this.config.startSpeed+world*this.config.acceleration);
+      const gap=Math.max(this.config.minGap,this.config.gap-(stage-1)*2,estimatedSpeed*.5+8.8);
+      this.nextRow+=gap+this.random()*6;
     }
   }
-  step(dt) {
-    if (this.mode !== 'running') return;
-    // Cap a single simulation step; the UI advances with a fixed 1/120 s timestep.
-    dt = clamp(dt, 0, .05);
-    this.time += dt; this.speed = Math.min(PHYSICS.maxSpeed, PHYSICS.startSpeed + this.distance * .009);
-    const move = this.speed * dt; this.distance += move;
-    this.x += (this.lane * LANE_WIDTH - this.x) * (1 - Math.exp(-19 * dt));
-    this.slide = Math.max(0, this.slide - dt); this.magnet = Math.max(0, this.magnet - dt);
-    if (this.y > 0 || this.vy > 0) {
-      this.vy -= PHYSICS.gravity * dt; this.y += this.vy * dt;
-      if (this.y <= 0) { this.y = 0; this.vy = 0; this.events.push({type: 'land'}); }
-    }
-    for (const o of this.obstacles) {
-      o.ahead -= move;
-      if (Math.abs(o.ahead) < o.halfLength + .3 && Math.abs(this.x - o.lane * LANE_WIDTH) < 1.05) {
-        const hit = o.type === 'train' || (o.type === 'barrier' && this.y < .99) || (o.type === 'gate' && (this.slide <= 0 || this.y > .08));
-        if (hit) { this.mode = 'over'; this.reason = o.type; this.events.push({type: 'crash'}); break; }
-      }
-      if (!o.passed && o.ahead < -o.halfLength - .4) { o.passed = true; }
-    }
-    if (this.mode === 'running') for (const p of this.pickups) {
-      p.ahead -= move;
-      const dx = Math.abs(this.x - p.lane * LANE_WIDTH);
-      const ordinary = Math.abs(p.ahead) < .95 && dx < .8 && p.y >= this.y - .3 && p.y <= this.y + (this.slide > 0 ? 1.05 : 2.1);
-      const magnetic = this.magnet > 0 && p.type === 'coin' && Math.abs(p.ahead) < 8.5;
-      if (!p.collected && (ordinary || magnetic)) {
-        p.collected = true;
-        if (p.type === 'coin') { this.coins++; this.events.push({ type: 'coin', lane: p.lane, y: p.y, ahead: p.ahead }); }
-        else { this.magnet = 8; this.events.push({type: 'magnet'}); }
-      }
-    }
-    this.obstacles = this.obstacles.filter(o => o.ahead > -16);
-    this.pickups = this.pickups.filter(p => p.ahead > -8 && !p.collected);
-    this.score = Math.floor(this.distance) + this.coins * 10;
-    const milestone = Math.floor(this.distance / 500);
-    if (milestone > this.lastMilestone && this.mode === 'running') { this.lastMilestone = milestone; this.events.push({type: 'milestone', distance: milestone * 500}); }
-    this.populate();
+  addPoints(amount,bucket,multiply=true){const points=amount*(multiply?this.multiplier:1);this.points+=points;this.stats[bucket]+=points;this.score=Math.floor(this.points+1e-7);}
+  collectBonus(type,fromMystery=false){
+    if(!Object.hasOwn(BONUSES,type))return false;
+    if(!fromMystery)this.bonusCount++;
+    if(type==='mystery'){
+      const reward=Math.floor(this.random()*4);
+      if(reward<2){const coins=reward===0?25:50;this.coins+=coins;this.bonusCoins+=coins;this.addPoints(coins*10,'bonusPoints');this.events.push({type:'mystery',message:`礼盒奖励 +${coins} 金币`});}
+      else{const bonus=reward===2?'board':['magnet','double','sneakers','jetpack'][Math.floor(this.random()*4)];this.collectBonus(bonus,true);this.events.push({type:'mystery',message:`礼盒奖励 · ${BONUSES[bonus].name}`});}
+    }else if(type==='board'){
+      if(this.boardCharges<3){this.boardCharges++;this.events.push({type:'boardPickup'});}
+      else{this.coins+=20;this.bonusCoins+=20;this.addPoints(200,'bonusPoints');this.events.push({type:'mystery',message:'滑板已满 · 转为 20 金币'});}
+    }else{
+      // Same-type pickup refreshes duration; different types may coexist.
+      this[type]=BONUSES[type].duration*this.config.bonusScale;
+      if(type==='jetpack'){this.vy=0;this.slide=0;this.landing=false;this.nextAirCoin=this.distance+7;this.pickups=this.pickups.filter(p=>!p.air);}
+      this.events.push({type,duration:this[type]});
+    }return true;
   }
-  drainEvents() { const e = this.events; this.events = []; return e; }
-  snapshot() { return { state: this.mode, distance: Math.floor(this.distance), score: this.score, coins: this.coins, lane: this.lane, jumping: this.y > .02, sliding: this.slide > 0, magnetSeconds: +this.magnet.toFixed(1), speed: Math.round(this.speed * 3.6) }; }
+  updateMissions(){
+    for(const m of this.missions){m.progress=Math.min(m.target,m.id==='coins'?this.coins:m.id==='distance'?Math.floor(this.distance):this.bonusCount);
+      if(!m.done&&m.progress>=m.target){m.done=true;this.addPoints(m.reward,'bonusPoints',false);this.events.push({type:'mission',message:`${m.name} · +${m.reward} 分`});}
+    }
+  }
+  step(dt){
+    if(this.mode!=='running')return;dt=clamp(dt,0,.05);if(!dt)return;
+    this.time+=dt;this.speed=Math.min(this.config.maxSpeed,this.config.startSpeed+this.distance*this.config.acceleration);
+    const move=this.speed*dt;this.distance+=move;this.addPoints(move,'distancePoints');
+    this.x+=(this.lane*LANE_WIDTH-this.x)*(1-Math.exp(-19*dt));
+    this.slide=Math.max(0,this.slide-dt);this.invulnerable=Math.max(0,this.invulnerable-dt);
+    this.comboTimer=Math.max(0,this.comboTimer-dt);if(this.comboTimer===0)this.combo=0;
+    // Flight suspends the board timer, so a stored shield is not wasted in the air.
+    for(const type of ['magnet','double','sneakers','jetpack','board']){
+      if(type==='board'&&this.jetpack>0)continue;
+      const was=this[type];this[type]=Math.max(0,was-dt);
+      if(type==='jetpack'&&was>0&&this[type]===0){this.landing=true;this.vy=0;this.events.push({type:'landing'});}
+    }
+    if(this.jetpack>0){
+      this.y+=(5.3-this.y)*(1-Math.exp(-8*dt));this.vy=0;
+      while(this.nextAirCoin<this.distance+100){const ahead=this.nextAirCoin-this.distance;
+        if(this.nextAirCoin<this.distance+this.jetpack*this.speed-10){const lane=Math.floor(this.nextAirCoin/24)%3-1;this.pickups.push({...this.item('coin',lane,ahead,6.1),air:true});}
+        this.nextAirCoin+=2.5;
+      }
+    }else if(this.y>0||this.vy>0){
+      this.vy-=PHYSICS.gravity*dt;this.y+=this.vy*dt;
+      if(this.y<=0){this.y=0;this.vy=0;if(this.landing){this.invulnerable=Math.max(this.invulnerable,1.35);this.landing=false;}this.events.push({type:'land'});}
+    }
+    // All objects move before collision handling, including on the final frame of a run.
+    for(const o of this.obstacles)o.ahead-=move;
+    for(const p of this.pickups)p.ahead-=move;
+    for(const o of this.obstacles){
+      if(o.broken)continue;
+      const dx=Math.abs(this.x-o.lane*LANE_WIDTH);
+      if(Math.abs(o.ahead)<o.halfLength+.3&&dx<1.05){
+        const playerTop=this.y+(this.slide>0?.72:2.05);
+        const hit=o.type==='train'?this.y<3.13:o.type==='barrier'?this.y<.99:(this.y<3.16&&playerTop>1.22);
+        if(hit&&this.jetpack<=0&&!this.landing&&this.invulnerable<=0){
+          if(this.board>0){this.board=0;this.invulnerable=1.4;o.broken=true;this.savedCrashes++;this.combo=0;this.events.push({type:'shieldBreak'});}
+          else{this.mode='over';this.reason=o.type;this.events.push({type:'crash'});break;}
+        }
+      }
+      if(!o.passed&&o.ahead<-o.halfLength-.4){
+        o.passed=true;
+        if(dx<.8&&this.jetpack<=0&&!this.landing&&this.invulnerable<=0){this.stats.nearMisses++;this.addPoints(30,'bonusPoints');this.events.push({type:'dodge'});}
+      }
+    }
+    if(this.mode==='running')for(const p of this.pickups){
+      const dx=Math.abs(this.x-p.lane*LANE_WIDTH);
+      const ordinary=Math.abs(p.ahead)<1&&dx<.82&&p.y>=this.y-.3&&p.y<=this.y+(this.slide>0?1.05:2.1);
+      const magnetic=this.magnet>0&&p.type==='coin'&&Math.abs(p.ahead)<9;
+      if(!p.collected&&(ordinary||magnetic)){
+        p.collected=true;
+        if(p.type==='coin'){
+          this.coins++;this.combo++;this.maxCombo=Math.max(this.combo,this.maxCombo);this.comboTimer=this.config.comboWindow;
+          this.addPoints(10,'coinPoints');this.events.push({type:'coin',lane:p.lane,y:p.y,ahead:p.ahead});
+          if(this.combo===20||this.combo===40)this.events.push({type:'combo',combo:this.combo});
+        }else this.collectBonus(p.type);
+      }
+    }
+    this.obstacles=this.obstacles.filter(o=>o.ahead>-16);this.pickups=this.pickups.filter(p=>p.ahead>-8&&!p.collected);
+    const stage=Math.min(5,1+Math.floor(this.distance/this.config.stageLength));
+    if(stage>this.stage){this.stage=stage;this.events.push({type:'stage',stage});}
+    this.stageProgress=this.stage===5?1:(this.distance%this.config.stageLength)/this.config.stageLength;
+    if(this.mode==='running')this.updateMissions();
+    this.score=Math.floor(this.points+1e-7);this.populate();
+  }
+  drainEvents(){const e=this.events;this.events=[];return e;}
+  snapshot(){return {state:this.mode,difficulty:this.difficulty,stage:this.stage,distance:Math.floor(this.distance),score:this.score,coins:this.coins,lane:this.lane,jumping:this.y>.02,sliding:this.slide>0,combo:this.combo,multiplier:this.multiplier,boardCharges:this.boardCharges,bonuses:Object.fromEntries(['magnet','double','sneakers','jetpack','board'].map(t=>[t,+this[t].toFixed(1)])),speed:Math.round(this.speed*3.6)};}
 }
