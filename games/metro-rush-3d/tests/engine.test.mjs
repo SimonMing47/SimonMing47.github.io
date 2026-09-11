@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { RunnerEngine, PHYSICS, DIFFICULTIES, BONUSES } from '../dist/engine.js';
 import { multiply, transform } from '../dist/renderer.js';
-function emptyGame(mode='classic',seed=47){const e=new RunnerEngine(seed,mode);e.start();e.obstacles=[];e.pickups=[];e.nextRow=1e9;return e;}
+function emptyGame(mode='classic',seed=47){const e=new RunnerEngine(seed,mode);e.start();e.obstacles=[];e.pickups=[];e.tunnels=[];e.courses=[];e.nextRow=1e9;return e;}
 function advance(e,seconds){for(let i=0;i<Math.round(seconds*120);i++)e.step(1/120);}
 function obstacle(e,type,ahead=0,lane=0){e.obstacles=[{id:999,type,ahead,lane,halfLength:type==='train'?4.4:.65}];}
 
@@ -67,23 +67,22 @@ test('mission bonuses are paid once, separately from multiplier scoring',()=>{
 test('mystery rewards are deterministic, nonrecursive and count one collected item',()=>{
   for(let seed=0;seed<30;seed++){const a=emptyGame('classic',seed),b=emptyGame('classic',seed);a.collectBonus('mystery');b.collectBonus('mystery');assert.deepEqual(a.snapshot(),b.snapshot());assert.equal(a.bonusCount,1);assert.ok(a.coins>=25||a.boardCharges>1||['magnet','double','sneakers','jetpack'].some(k=>a[k]>0));}
 });
-test('generated rows require both jump and slide, preserve a reachable route and recovery time',()=>{
+test('generated ground rows and elevated courses preserve reachable routes and recovery space',()=>{
   for(const mode of Object.keys(DIFFICULTIES))for(let seed=0;seed<20;seed++){
-    const e=new RunnerEngine(seed,mode);e.obstacles=[];e.pickups=[];e.rows=0;e.nextRow=0;e.distance=0;
-    let priorRoute=0,last=-Infinity;const actions=new Set();let mixed=0;
+    const e=emptyGame(mode,seed);e.rows=0;e.nextRow=0;let priorRoute=0,last=-Infinity;const seen=new Set(),actions=new Set();let courses=0,mixed=0;
     for(let section=0;section<30;section++){
       e.distance=section*160;e.populate();const rows=new Map();for(const o of e.obstacles){if(!rows.has(o.row))rows.set(o.row,[]);rows.get(o.row).push(o);}
-      for(const items of rows.values()){
-        const pos=items[0].ahead+e.distance;if(pos<=last)continue;
-        const {routeLane,required}=items[0];assert.ok(Math.abs(routeLane-priorRoute)<=1);priorRoute=routeLane;
-        if(required){actions.add(required);assert.equal(items.length,3);assert.deepEqual(items.map(o=>o.lane),[-1,0,1]);assert.equal(items.find(o=>o.lane===routeLane).type,required==='jump'?'barrier':'gate');if(items.some(o=>o.type==='train'))mixed++;}
-        else{assert.ok(items.length>=1&&items.length<=2);assert.ok(!items.some(o=>o.lane===routeLane));}
+      for(const [row,items] of rows){
+        if(seen.has(row))continue;seen.add(row);const pos=items[0].rowWorld,{routeLane,required}=items[0];assert.ok(Math.abs(routeLane-priorRoute)<=1);priorRoute=routeLane;
         if(Number.isFinite(last)){const speed=Math.min(e.config.maxSpeed,e.config.startSpeed+last*e.config.acceleration);assert.ok(pos-last>=Math.max(e.config.minGap,speed*1.4+9.4)-.001);}
+        if(items[0].course){const c=e.courses.find(c=>c.row===row);assert.ok(c);assert.equal(items.filter(o=>o.type==='ramp').length,2);assert.ok(items.some(o=>o.type==='gap'));assert.ok(items.some(o=>o.approachSpeed));assert.ok(items.filter(o=>o.y>3).every(o=>o.lane===c.lane));last=c.end;courses++;continue;}
+        if(required){actions.add(required);assert.equal(items.length,3);assert.equal(items.find(o=>o.lane===routeLane).type,required==='jump'?'barrier':'gate');if(items.some(o=>o.type==='train'))mixed++;}
+        else{assert.ok(items.length>=1&&items.length<=2);assert.ok(!items.some(o=>o.lane===routeLane));}
         last=pos;
       }
-      for(const o of e.obstacles)o.ahead-=160;for(const p of e.pickups)p.ahead-=160;e.obstacles=e.obstacles.filter(o=>o.ahead>-16);e.pickups=e.pickups.filter(p=>p.ahead>-8);
+      for(const o of e.obstacles)o.ahead-=160;for(const p of e.pickups)p.ahead-=160;e.obstacles=e.obstacles.filter(o=>o.ahead+o.halfLength>-16);e.pickups=e.pickups.filter(p=>p.ahead>-8);
     }
-    assert.deepEqual([...actions].sort(),['jump','slide']);if(mode!=='casual')assert.ok(mixed>0);
+    assert.deepEqual([...actions].sort(),['jump','slide']);assert.ok(courses>1);if(mode!=='casual')assert.ok(mixed>0);
   }
 });
 test('three-lane action rows cannot be bypassed by standing or weaving through lane gaps',()=>{
@@ -109,11 +108,17 @@ test('generated routes can be completed with timed jumps and slides, including s
     if(superJump)e.sneakers=1e5;
     while(e.distance-start<2200&&e.mode==='running'){
       e.pickups=[];
-      const next=e.obstacles.find(o=>o.ahead>-5);
-      if(next){
-        if(e.lane!==next.routeLane)e.action(e.lane<next.routeLane?'right':'left');
-        if(next.required&&next.ahead/e.speed<=.4&&!acted.has(next.row)){assert.ok(e.action(next.required),`${mode} ${next.required} rejected`);acted.add(next.row);}
-      }
+      const course=e.courses.filter(c=>c.end>e.distance).sort((a,b)=>a.start-b.start)[0];
+      const ground=e.obstacles.filter(o=>!o.course&&o.ahead+o.halfLength>-.5).sort((a,b)=>a.rowWorld-b.rowWorld)[0];
+      let lane;
+      if(course&&(!ground||course.start<ground.rowWorld)){
+        lane=course.lane;
+        for(const [name,world,action,lead] of [['barrier',course.jumpAt,'jump',.4],['gap',course.firstRoof[1],'jump',.30],['gate',course.slideAt,'slide',.4]]){
+          const key=`course-${course.row}-${name}`;
+          if(world>=e.distance&&world-e.distance<=e.speed*lead&&!acted.has(key)){assert.ok(e.action(action),`${mode} course ${name}, y=${e.y}, grounded=${e.grounded}`);acted.add(key);}
+        }
+      }else if(ground){lane=ground.routeLane;if(ground.required&&ground.rowWorld-e.distance<=e.speed*.4&&!acted.has(ground.row)){assert.ok(e.action(ground.required),`${mode} ${ground.required} rejected`);acted.add(ground.row);}}
+      if(lane!==undefined&&e.lane!==lane)e.action(e.lane<lane?'right':'left');
       e.step(dt);
     }
     assert.equal(e.mode,'running',`${mode}, dt=${dt}, super=${superJump}, seed=${seed}, distance=${e.distance-start}, reason=${e.reason}`);
@@ -122,7 +127,7 @@ test('generated routes can be completed with timed jumps and slides, including s
 });
 test('bonus bag exposes all six pickup types before repeating',()=>{const e=emptyGame();e.bonusBag=[];const six=Array.from({length:6},()=>e.nextBonus());assert.equal(new Set(six).size,6);assert.deepEqual([...six].sort(),Object.keys(BONUSES).sort());});
 test('long play keeps object counts bounded and restart clears all bonus state',()=>{
-  const e=emptyGame();e.nextRow=30;for(let i=0;i<12000;i++){e.obstacles=e.obstacles.filter(o=>o.ahead>8);e.step(1/120);}assert.ok(e.obstacles.length<22);assert.ok(e.pickups.length<180);
+  const e=emptyGame();e.nextRow=30;e.invulnerable=1e6;for(let i=0;i<12000;i++)e.step(1/120);assert.equal(e.mode,'running');assert.ok(e.distance>2000);assert.ok(e.obstacles.length<35);assert.ok(e.pickups.length<240);assert.ok(e.tunnels.length<3);
   for(const type of Object.keys(BONUSES))e.collectBonus(type);e.reset(47,'expert');assert.equal(e.mode,'menu');assert.equal(e.coins,0);assert.equal(e.combo,0);assert.equal(e.bonusCount,0);for(const k of ['magnet','double','sneakers','jetpack','board'])assert.equal(e[k],0);assert.equal(e.boardCharges,1);
 });
 test('3D hierarchy preserves translation, rotation and scale',()=>{const m=multiply(transform(3,4,5),transform(0,2,0,2,3,4));assert.deepEqual([m[12],m[13],m[14]],[3,6,5]);assert.deepEqual([m[0],m[5],m[10]],[2,3,4]);const r=multiply(transform(0,0,0,1,1,1,0,Math.PI/2),transform(0,0,-2));assert.ok(Math.abs(r[12]+2)<1e-6);assert.ok(Math.abs(r[14])<1e-6);});

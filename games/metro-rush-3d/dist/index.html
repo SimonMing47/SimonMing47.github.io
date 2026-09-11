@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#142438">
-  <meta name="description" content="三档难度、六种奖励，冲进城市轨道。METRO RUSH 原创 3D 跑酷游戏。">
+  <meta name="description" content="沿坡登上车顶，跃过车厢间隙，穿过山洞并躲避迎面列车。METRO RUSH 原创 3D 跑酷游戏。">
   <title>METRO RUSH · 地铁疾跑</title>
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./style.css">
@@ -23,13 +23,13 @@
     </div>
   </header>
   <section class="hud" id="hud" aria-label="当前成绩" hidden>
-    <div class="score-block"><span class="hud-label">本次得分</span><div><strong id="score">0</strong><span class="multiplier" id="multiplier">×1.5</span></div><span class="distance-line"><b id="distance">0</b> m <i></i><span id="speed">65 km/h</span></span></div>
+    <div class="score-block"><span class="hud-label">本次得分</span><div><strong id="score">0</strong><span class="multiplier" id="multiplier">×1.5</span></div><span class="distance-line"><b id="distance">0</b> m <i></i><span id="speed">65 km/h</span><span id="route-status" class="route-status">地面</span></span></div>
     <div class="collect-block"><div><span class="coin-symbol" aria-hidden="true">Ⅱ</span><strong id="coins">0</strong></div><span>最高分 <b id="hud-best">0</b></span></div>
     <div class="stage-block"><div><span id="zone">LV.1 热身起跑</span><span id="next-stage">下一等级 600 m</span></div><span class="stage-track"><span id="stage-fill"></span></span></div>
   </section>
   <section id="menu" aria-labelledby="game-title">
     <div class="lobby">
-      <div class="title-lockup"><span class="edition-label">城市轨道 · 无尽挑战</span><h1 id="game-title">METRO <em>RUSH<span>.</span></em></h1><p>换道、跃起、滑行。跑出你的节奏。</p></div>
+      <div class="title-lockup"><span class="edition-label">城市轨道 · 无尽挑战</span><h1 id="game-title">METRO <em>RUSH<span>.</span></em></h1><p>沿坡登上车顶，穿过山洞，避开来车。</p></div>
       <div class="launch-panel">
         <div class="section-top"><h2>选择难度</h2><span>01 — 03</span></div>
         <fieldset class="difficulty-options" id="difficulties" aria-describedby="difficulty-hint difficulty-pattern"><legend class="sr-only">选择难度</legend>
@@ -59,7 +59,7 @@
     <div id="result-stats" hidden><div class="result-score"><span>本次得分</span><strong id="result-score">0</strong><span id="result-mode">经典 · 基础倍率 ×1.5</span></div><div class="result-grid"><div><span>奔跑距离</span><strong id="result-distance">0 m</strong></div><div><span>收集金币</span><strong id="result-coins">0</strong></div><div><span>最高连币</span><strong id="result-combo">0</strong></div><div><span>道具拾取</span><strong id="result-bonuses">0</strong></div></div><div class="result-reward" id="result-reward"></div></div>
     <button id="resume" class="primary-button">继续奔跑 →</button><button id="home" class="text-button">返回起点 · 调整难度</button>
   </div></section>
-  <dialog id="bonus-guide" class="guide-dialog" aria-labelledby="guide-title"><div class="guide-dialog-top"><div><span class="eyebrow">METRO RUSH</span><h2 id="guide-title">跑酷指南</h2></div><button id="close-guide" class="icon-button" aria-label="关闭指南">×</button></div><nav id="guide-tabs" class="guide-tabs" aria-label="道具选择"></nav><div class="guide-list" id="guide-list" aria-live="polite"></div><details class="guide-notes"><summary>操作与得分规则</summary><p><b>连币加成</b>　20 连 ×1.5，40 连 ×2；与难度和双倍积分相乘。</p><p><b>本局挑战</b>　50 金币 +500 分，800 米 +800 分，3 道具 +600 分。</p><p><b>操作</b>　方向键 / WASD 换道、跳跃、滑铲；空格跳跃；B / 手机双击启用滑板；P / Esc 暂停。</p><p>同类道具刷新时长；休闲时长 +25%，极限时长 −15%。飞行结束安全落地，滑板抵挡一次碰撞后消耗。</p><p><b>路段提示</b>　整排低障碍需要跳跃，整排横杆需要滑铲；列车组合还需提前选道。</p></details></dialog>
+  <dialog id="bonus-guide" class="guide-dialog" aria-labelledby="guide-title"><div class="guide-dialog-top"><div><span class="eyebrow">METRO RUSH</span><h2 id="guide-title">跑酷指南</h2></div><button id="close-guide" class="icon-button" aria-label="关闭指南">×</button></div><nav id="guide-tabs" class="guide-tabs" aria-label="道具选择"></nav><div class="guide-list" id="guide-list" aria-live="polite"></div><details class="guide-notes" open><summary>斜坡、车顶与山洞</summary><p><b>上下列车</b>　从带箭头的斜坡跑上车顶；沿出口斜坡下车，也可向邻道跳下。</p><p><b>车顶路线</b>　可以在车顶跳跃、滑铲和收集金币。车厢断口需要提前起跳；空中下滑会快速落地并接滑铲。</p><p><b>迎面列车</b>　暖色车头带闪灯，有独立速度。看到来车提示提前换道；山洞内仍有车灯预警，超级跳跃会受洞顶限制。</p></details><details class="guide-notes"><summary>操作与得分规则</summary><p><b>连币加成</b>　20 连 ×1.5，40 连 ×2；与难度和双倍积分相乘。</p><p><b>本局挑战</b>　50 金币 +500 分，800 米 +800 分，3 道具 +600 分。</p><p><b>操作</b>　方向键 / WASD 换道、跳跃、滑铲；空格跳跃；B / 手机双击启用滑板；P / Esc 暂停。</p><p>同类道具刷新时长；休闲时长 +25%，极限时长 −15%。飞行结束安全落地，滑板抵挡一次碰撞后消耗。</p><p><b>路段提示</b>　整排低障碍需要跳跃，整排横杆需要滑铲；列车组合还需提前选道。</p></details></dialog>
   <div id="error" class="error-panel" role="alert" hidden><h2>暂时无法启动 3D 场景</h2><p id="error-text">请使用支持 WebGL 2 的浏览器，并启用硬件加速。</p><button class="primary-button" onclick="location.reload()">重新加载</button></div>
   <noscript><div class="error-panel"><h2>请启用 JavaScript 后开始游戏</h2></div></noscript>
 </main>

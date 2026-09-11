@@ -23,7 +23,7 @@ function unlockAudio(){if(!soundOn)return;try{audioContext??=new(window.AudioCon
 function tone(type){
   if(!soundOn||!audioContext||audioContext.state!=='running')return;const now=audioContext.currentTime;
   if(type==='coin'&&now-lastCoinTone<.055)return;if(type==='coin')lastCoinTone=now;
-  const notes={coin:[900+(engine.combo%8)*70,1550,.09,.025],jump:[260,590,.13,.025],slide:[340,130,.15,.025],move:[230,270,.045,.01],crash:[110,34,.4,.07],magnet:[440,1350,.38,.035],double:[660,1760,.3,.032],sneakers:[360,1080,.2,.03],jetpack:[180,800,.6,.03],board:[300,900,.23,.032],boardPickup:[660,980,.15,.03],mystery:[750,1600,.3,.033],mission:[660,1320,.4,.04],combo:[880,1760,.25,.035],stage:[440,880,.3,.03],shieldBreak:[180,80,.3,.04],land:[85,50,.08,.015]};
+  const notes={coin:[900+(engine.combo%8)*70,1550,.09,.025],jump:[260,590,.13,.025],slide:[340,130,.15,.025],move:[230,270,.045,.01],crash:[110,34,.4,.07],magnet:[440,1350,.38,.035],double:[660,1760,.3,.032],sneakers:[360,1080,.2,.03],jetpack:[180,800,.6,.03],board:[300,900,.23,.032],boardPickup:[660,980,.15,.03],mystery:[750,1600,.3,.033],mission:[660,1320,.4,.04],combo:[880,1760,.25,.035],stage:[440,880,.3,.03],shieldBreak:[180,80,.3,.04],land:[85,50,.08,.015],trainWarning:[140,95,.5,.035],ceiling:[140,80,.12,.02]};
   const n=notes[type];if(!n)return;const osc=audioContext.createOscillator(),gain=audioContext.createGain();
   osc.type=type==='crash'?'sawtooth':'sine';osc.frequency.setValueAtTime(n[0],now);osc.frequency.exponentialRampToValueAtTime(n[1],now+n[2]);
   gain.gain.setValueAtTime(n[3],now);gain.gain.exponentialRampToValueAtTime(.001,now+n[2]);osc.connect(gain);gain.connect(audioContext.destination);osc.start();osc.stop(now+n[2]);osc.onended=()=>{osc.disconnect();gain.disconnect();};
@@ -89,10 +89,16 @@ function syncUI(){
     if(seconds>0){active++;$(`seconds-${key}`).textContent=`${Math.ceil(seconds)}s`;$(`fill-${key}`).style.transform=`scaleX(${seconds/(b.duration*engine.config.bonusScale)})`;el.classList.toggle('expiring',seconds<3);el.setAttribute('aria-label',`${b.name}，剩余 ${Math.ceil(seconds)} 秒`);}
   }
   $('power-bar').hidden=!running||active===0;
-  const upcoming=engine.obstacles.find(o=>o.required&&!o.broken&&o.ahead>0&&o.ahead/engine.speed<1.8);
-  $('action-cue').hidden=!running||!upcoming||engine.jetpack>0||engine.landing;
-  if(upcoming){$('action-symbol').textContent=upcoming.required==='jump'?'↑':'↓';$('action-label').textContent=upcoming.required==='jump'?'前方跳跃':'前方滑铲';$('action-distance').textContent=`${Math.ceil(upcoming.ahead)} 米 · ${engine.obstacles.some(o=>o.row===upcoming.row&&o.type==='train')?'先避开列车':upcoming.required==='jump'?'↑ / 上滑':'↓ / 下滑'}`;$('action-cue').dataset.action=upcoming.required;}
-
+  $('app').dataset.environment=engine.environment;
+  const surfaces={ground:'地面',roof:'车顶',uphill:'上坡',downhill:'下坡',air:'腾空',flight:'飞行'};
+  $('route-status').textContent=`${engine.environment==='tunnel'?'山洞 · ':''}${surfaces[engine.surface]}`;
+  const upcoming=engine.routeCue;
+  $('action-cue').hidden=!running||!upcoming;
+  if(upcoming){
+    const labels={jump:['↑','前方跳跃','↑ / 上滑'],slide:['↓','前方滑铲','↓ / 下滑'],climb:['↗','斜坡上车顶','沿箭头跑上斜坡'],descend:['↘','斜坡下车','继续前进回到地面'],oncoming:['!','列车驶来',`${['左','中','右'][upcoming.lane+1]}轨来车 · 提前换道`]};
+    const [symbol,label,hint]=labels[upcoming.kind];$('action-symbol').textContent=symbol;$('action-label').textContent=label;
+    $('action-distance').textContent=`${Math.ceil(upcoming.meters)} 米 · ${upcoming.mixed?'先避开列车':hint}`;$('action-cue').dataset.action=upcoming.kind;
+  }
   $('board-count').textContent=engine.boardCharges;$('board-action').disabled=engine.board>0||engine.boardCharges===0||engine.jetpack>0||engine.landing;
   $('board-hint').textContent=engine.board>0?`保护中 · ${Math.ceil(engine.board)}s`:engine.jetpack>0?'飞行中':engine.boardCharges===0?'拾取滑板补充':'B / 双击使用';
   const mission=engine.missions.find(m=>!m.done);
@@ -112,7 +118,7 @@ function showGameOver(){
   const record=engine.score>records[difficulty].score;
   records[difficulty]={score:Math.max(records[difficulty].score,engine.score),distance:Math.max(records[difficulty].distance,Math.floor(engine.distance))};storage.set('metro-rush-records-v2',JSON.stringify(records));updateMenu();
   $('result-eyebrow').textContent=record?'NEW PERSONAL BEST':'ONE MORE RUN?';$('overlay-title').textContent=record?'漂亮，刷新纪录！':'下一程，再突破';
-  $('overlay-message').textContent={train:'列车需要提前换道。别忘了 B 键启动滑板，可以抵挡一次碰撞。',barrier:'向上跳跃，或换到空闲轨道，就能越过路障。',gate:'向下滑铲通过横杆。超级跳跃时也要留意高度。'}[engine.reason]||'这一程结束了，下一程继续。';
+  $('overlay-message').textContent={train:'从斜坡登上车顶，或提前换道。车厢间隙需要起跳越过。',oncoming:'迎面列车速度更快，看到车灯和来车提示就提前换道。',ramp:'从坡脚沿箭头进入斜坡；无法从侧面穿过坡体。',barrier:'向上跳跃，或换到空闲轨道，就能越过路障。',gate:'向下滑铲通过横杆。超级跳跃时也要留意高度。'}[engine.reason]||'这一程结束了，下一程继续。';
   $('result-stats').hidden=false;$('result-score').textContent=format(engine.score);$('result-mode').textContent=`${engine.config.name} · 基础倍率 ${multiplierText(engine.config.multiplier)}`;
   $('result-distance').textContent=format(engine.distance)+' m';$('result-coins').textContent=format(engine.coins);$('result-combo').textContent=format(engine.maxCombo);$('result-bonuses').textContent=engine.bonusCount;
   const complete=engine.missions.filter(m=>m.done).length;$('result-reward').textContent=`完成挑战 ${complete}/3 · 滑板护身 ${engine.savedCrashes} 次 · 奖励分 +${format(engine.stats.bonusPoints)}`;
@@ -125,6 +131,7 @@ function events(){
     if(['magnet','double','sneakers','jetpack','board'].includes(e.type))announceBonus(e.type,e.duration);
     if(e.type==='boardPickup')toast('获得护航滑板 · 按 B / 双击启用');
     if(e.type==='shieldBreak'){renderer.shake=.6;toast('滑板已护身 · 继续冲刺！');}
+    if(e.type==='environment')toast(e.environment==='tunnel'?'进入山洞 · 留意来车和洞顶':'驶出山洞 · 回到城市轨道');
     if(e.type==='landing')toast('安全降落 · 准备接回轨道');
     if(e.type==='mystery'||e.type==='mission')toast(e.message,2800);
     if(e.type==='combo')toast(`${e.combo} 连币！积分倍率 ${multiplierText(engine.multiplier)}`);

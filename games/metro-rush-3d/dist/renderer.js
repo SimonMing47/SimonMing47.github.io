@@ -1,4 +1,4 @@
-import { LANE_WIDTH, randomSource, BONUSES, pickupPose } from './engine.js';
+import { LANE_WIDTH, randomSource, BONUSES, pickupPose, TRACK } from './engine.js';
 
 const vertexSource = `#version 300 es
 precision highp float;
@@ -8,6 +8,7 @@ layout(location=2) in mat4 aModel;
 layout(location=6) in vec4 aColor;
 uniform mat4 uViewProjection;
 uniform vec3 uCamera;
+uniform vec2 uTunnelBounds;
 out vec3 vColor;
 out float vFog;
 void main(){
@@ -17,6 +18,8 @@ void main(){
   float sun = max(dot(n,normalize(vec3(-0.55,0.85,0.45))),0.0);
   float rim = max(dot(n,normalize(vec3(0.8,0.15,-0.5))),0.0);
   vec3 light = vec3(0.51,0.60,0.68) + vec3(0.65,0.53,0.37)*sun + vec3(0.04,0.13,0.15)*rim;
+  float tunnel = smoothstep(uTunnelBounds.x-4.0,uTunnelBounds.x+4.0,world.z)*(1.0-smoothstep(uTunnelBounds.y-4.0,uTunnelBounds.y+4.0,world.z));
+  light = mix(light,vec3(0.39,0.48,0.57)+vec3(0.18,0.13,0.06)*max(n.y,0.0),tunnel);
   vColor = mix(aColor.rgb * light,aColor.rgb,aColor.a);
   vFog = smoothstep(58.0,205.0,distance(uCamera,world.xyz));
   gl_Position = uViewProjection * world;
@@ -26,7 +29,8 @@ precision mediump float;
 in vec3 vColor;
 in float vFog;
 out vec4 outColor;
-void main(){outColor=vec4(mix(vColor,vec3(0.61,0.72,0.79),vFog),1.0);}`;
+uniform float uTunnelBlend;
+void main(){outColor=vec4(mix(vColor,mix(vec3(0.61,0.72,0.79),vec3(0.075,0.14,0.21),uTunnelBlend),vFog),1.0);}`;
 
 export function multiply(a,b){
   const out = new Float32Array(16);
@@ -99,7 +103,8 @@ export class WorldRenderer {
     gl.enable(gl.DEPTH_TEST);gl.enable(gl.CULL_FACE);gl.clearColor(0,0,0,0);
     this.cubes=new Batch(gl,cubeGeometry());this.cylinders=new Batch(gl,cylinderGeometry());this.spheres=new Batch(gl,sphereGeometry());
     this.viewUniform=gl.getUniformLocation(this.program,'uViewProjection');this.eyeUniform=gl.getUniformLocation(this.program,'uCamera');
-    this.camX=0;this.demoDistance=0;this.particles=[];this.visualTime=0;this.shake=0;this.reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.tunnelBoundsUniform=gl.getUniformLocation(this.program,'uTunnelBounds');this.tunnelBlendUniform=gl.getUniformLocation(this.program,'uTunnelBlend');
+    this.camX=0;this.camHeight=0;this.demoDistance=0;this.particles=[];this.visualTime=0;this.shake=0;this.reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
     const random=randomSource(47);this.buildings=[];
     for(let i=0;i<40;i++)this.buildings.push({side:i%2?1:-1,x:11+random()*16,z:-i*5.9,h:9+random()*24,w:3+random()*5,d:4+random()*5,tone:['#51727e','#426377','#66858a','#779397','#496c78'][i%5],lit:random()>.45});
   }
@@ -107,47 +112,65 @@ export class WorldRenderer {
   cylinder(x,y,z,w,h,d,c,rx=0,ry=0,rz=0,glow=0,parent=null){const m=transform(x,y,z,w,h,d,rx,ry,rz);this.cylinders.add(parent?multiply(parent,m):m,color(c,glow));}
   sphere(x,y,z,w,h,d,c,glow=0,parent=null){const m=transform(x,y,z,w,h,d);this.spheres.add(parent?multiply(parent,m):m,color(c,glow));}
   resize(){const ratio=Math.min(devicePixelRatio||1,1.75);const w=Math.max(1,Math.round(this.canvas.clientWidth*ratio)),h=Math.max(1,Math.round(this.canvas.clientHeight*ratio));if(w!==this.canvas.width||h!==this.canvas.height){this.canvas.width=w;this.canvas.height=h;}this.gl.viewport(0,0,w,h);}
-  train(x,z,tone='#319c9d'){
-    this.box(x,.35,z,2.2,.55,8.7,'#243c4a');
-    this.box(x,1.73,z,2.22,2.35,8.4,tone);
-    this.box(x,2.96,z,2.12,.2,8.1,'#dce1d5');
-    this.box(x,1.05,z,2.24,.16,8.41,'#efc567');
-    this.box(x,2.15,z+4.23,1.82,.85,.045,'#173c4b');
-    this.box(x,2.14,z+4.27,.04,.86,.055,'#859d9d');
-    this.box(x,1.19,z+4.255,1.55,.12,.08,'#eee9d3');
-    this.box(x,2.76,z+4.24,.67,.14,.065,'#ffd15a',0,0,0,.8);
-    this.box(x, .65,z+4.25,1.7,.2,.22,'#1f3c47');
+  train(x,z,tone='#319c9d',length=8.8,roofRoute=false){
+    const parent=transform(x,0,z,1,1,length/8.8);
+    const box=(X,Y,Z,w,h,d,c,rx=0,ry=0,rz=0,glow=0)=>this.box(X-x,Y,Z-z,w,h,d,c,rx,ry,rz,glow,parent);
+    const cylinder=(X,Y,Z,w,h,d,c,rx=0,ry=0,rz=0,glow=0)=>this.cylinder(X-x,Y,Z-z,w,h,d,c,rx,ry,rz,glow,parent);
+    box(x,.35,z,2.2,.55,8.7,'#243c4a');
+    box(x,1.73,z,2.22,2.35,8.4,tone);
+    box(x,2.96,z,2.12,.2,8.1,'#dce1d5');
+    box(x,1.05,z,2.24,.16,8.41,'#efc567');
+    box(x,2.15,z+4.23,1.82,.85,.045,'#173c4b');
+    box(x,2.14,z+4.27,.04,.86,.055,'#859d9d');
+    box(x,1.19,z+4.255,1.55,.12,.08,'#eee9d3');
+    box(x,2.76,z+4.24,.67,.14,.065,'#ffd15a',0,0,0,.8);
+    box(x, .65,z+4.25,1.7,.2,.22,'#1f3c47');
     for(const side of [-1,1]){
-      this.box(x+side*.77,1.42,z+4.26,.28,.21,.055,'#fff0ae',0,0,0,1);
-      for(let i=-3;i<=3;i+=1.3)this.box(x+side*1.13,2.16,z+i,.025,.87,.9,'#1c4655');
-      for(const p of [-2.85,2.85])this.cylinder(x+side*1.0,.38,z+p,.59,.59,.19,'#172731',0,Math.PI/2);
-      this.box(x+side*1.14,1.7,z,.03,1.96,1.25,'#c1d3ca');
-      this.box(x+side*1.17,2.14,z,.03,.78,.93,'#325a67');
-      this.box(x+side*1.19,1.69,z,.025,1.94,.035,'#3d737a');
+      box(x+side*.77,1.42,z+4.26,.28,.21,.055,'#fff0ae',0,0,0,1);
+      for(let i=-3;i<=3;i+=1.3)box(x+side*1.13,2.16,z+i,.025,.87,.9,'#1c4655');
+      for(const p of [-2.85,2.85])cylinder(x+side*1.0,.38,z+p,.59,.59,.19,'#172731',0,Math.PI/2);
+      box(x+side*1.14,1.7,z,.03,1.96,1.25,'#c1d3ca');
+      box(x+side*1.17,2.14,z,.03,.78,.93,'#325a67');
+      box(x+side*1.19,1.69,z,.025,1.94,.035,'#3d737a');
     }
-    this.box(x,3.16,z-1.8,1.18,.23,1.8,'#648187');
+    box(x,3.22,z,2.18,.16,8.8,'#bacac4');
+    if(roofRoute){for(const side of [-1,1])box(x+side*.96,3.31,z,.07,.018,8.8,'#ffda7d',0,0,0,.4);}
+    else box(x,3.25,z-1.8,1.18,.08,1.8,'#7e9599');
   }
   obstacle(o){
     if(o.broken)return;
     const x=o.lane*LANE_WIDTH,z=2.5-o.ahead;
-    if(o.type==='train')return this.train(x,z,o.row%3===0?'#359c9b':o.row%3===1?'#dd9868':'#728cac');
+    if(o.type==='gap')return;
+    if(o.type==='ramp')return this.ramp(o);
+    if(o.type==='train'){
+      const count=Math.max(1,Math.ceil(o.halfLength*2/8.8)),length=o.halfLength*2/count;
+      for(let i=0;i<count;i++)this.train(x,z+o.halfLength-length*(i+.5),o.approachSpeed?'#d67651':o.roofRoute?'#378e9d':o.row%3===1?'#dd9868':'#728cac',length,o.roofRoute);
+      if(o.approachSpeed){
+        const front=z+o.halfLength;
+        for(const side of [-1,1]){this.box(x+side*.78,1.46,front+.08,.32,.22,.05,'#fff5bb',0,0,0,1);this.box(x+side*.9,2.76,front+.04,.12,.12,.05,Math.sin(this.visualTime*8)>0?'#ff6045':'#e7a37a',0,0,0,1);}
+        for(let i=0;i<3;i++)this.box(x,.07,front+1+i*1.9,1.4+i*.35,.014,.7,'#d8b96b',0,0,0,.65-i*.1);
+      }
+      return;
+    }
+    const base=o.y||0;
+    const box=(X,Y,Z,...args)=>this.box(X,Y+base,Z,...args);
     if(o.type==='barrier'){
-      this.box(x,.57,z,2,.85,.7,'#dc7350');this.box(x,1.04,z,2.13,.12,.85,'#ffdf8c');
-      for(let i=-2;i<=2;i++)this.box(x+i*.4,.58,z+.361,.17,.64,.025,'#fce6b7',0,0,-.38);
-      if(o.required==='jump'){this.box(x,1.63,z,.095,.52,.085,'#fff1ba',0,0,0,1);for(const side of [-1,1])this.box(x+side*.13,1.77,z,.08,.35,.085,'#fff1ba',0,0,side*.72,1);}
-      for(const s of [-1,1]){this.box(x+s*.85,.12,z,.22,.24,1,'#243d49');this.box(x+s*.84,1.17,z,.13,.16,.14,'#ffd674',0,0,0,1);}
+      box(x,.57,z,2,.85,.7,'#dc7350');box(x,1.04,z,2.13,.12,.85,'#ffdf8c');
+      for(let i=-2;i<=2;i++)box(x+i*.4,.58,z+.361,.17,.64,.025,'#fce6b7',0,0,-.38);
+      if(o.required==='jump'){box(x,1.63,z,.095,.52,.085,'#fff1ba',0,0,0,1);for(const side of [-1,1])box(x+side*.13,1.77,z,.08,.35,.085,'#fff1ba',0,0,side*.72,1);}
+      for(const s of [-1,1]){box(x+s*.85,.12,z,.22,.24,1,'#243d49');box(x+s*.84,1.17,z,.13,.16,.14,'#ffd674',0,0,0,1);}
     }else{
-      for(const s of [-1,1]){this.box(x+s*1.01,1.48,z,.14,2.96,.3,'#d69d5c');this.box(x+s*1.01,.15,z,.45,.3,.65,'#274955');}
-      this.box(x,2.22,z,2.2,1.87,.32,'#dd8654');
-      this.box(x,1.32,z+.18,2.2,.15,.06,'#ffdfa4');
-      for(let i=-2;i<=2;i++)this.box(x+i*.41,2.19,z+.18,.2,1.55,.02,'#f4bd6e',0,0,-.2);
-      this.box(x,2.25,z+.22,.66,.62,.04,'#fff0c1');this.box(x,2.37,z+.25,.12,.26,.03,'#6b4c37');
-      this.box(x-.09,2.20,z+.25,.1,.24,.03,'#6b4c37',0,0,-.7);this.box(x+.09,2.20,z+.25,.1,.24,.03,'#6b4c37',0,0,.7);
+      for(const s of [-1,1]){box(x+s*1.01,1.48,z,.14,2.96,.3,'#d69d5c');box(x+s*1.01,.15,z,.45,.3,.65,'#274955');}
+      box(x,2.22,z,2.2,1.87,.32,'#dd8654');
+      box(x,1.32,z+.18,2.2,.15,.06,'#ffdfa4');
+      for(let i=-2;i<=2;i++)box(x+i*.41,2.19,z+.18,.2,1.55,.02,'#f4bd6e',0,0,-.2);
+      box(x,2.25,z+.22,.66,.62,.04,'#fff0c1');box(x,2.37,z+.25,.12,.26,.03,'#6b4c37');
+      box(x-.09,2.20,z+.25,.1,.24,.03,'#6b4c37',0,0,-.7);box(x+.09,2.20,z+.25,.1,.24,.03,'#6b4c37',0,0,.7);
     }
   }
   player(e,t,menu){
     const run=e.mode==='running',phase=e.distance*1.05;
-    const bouncing=run&&e.y===0&&e.slide===0?Math.abs(Math.sin(phase))*.065:Math.sin(t*2)*.022;
+    const bouncing=run&&e.grounded&&e.slide===0?Math.abs(Math.sin(phase))*.065:Math.sin(t*2)*.022;
     const crouch=e.slide>0;const lean=(e.lane*LANE_WIDTH-e.x)*-.15;
     const flying=e.jetpack>0||e.landing;
     const riderHeight=e.board>0&&!flying?.16:0;
@@ -168,9 +191,9 @@ export class WorldRenderer {
     for(const side of [-1,1]){
       local(side*.249,waist+.89,.015,.085,.23,.18,'#edbc59');
       const swing=run&&!flying&&e.board<=0?Math.sin(phase+ (side===1?Math.PI:0))*.75:Math.sin(t*1.7)*.04;
-      const hip=multiply(base,transform(side*.17,waist-.12,0,1,1,1,crouch?-.85:e.y>.15?side*.32:swing));
+      const hip=multiply(base,transform(side*.17,waist-.12,0,1,1,1,crouch?-.85:!e.grounded?side*.32:swing));
       this.box(0,-.24,0,.235,.49,.29,'#274c62',0,0,0,0,hip);
-      const knee=multiply(hip,transform(0,-.45,0,1,1,1,crouch?1.7:e.y>.15?.6:Math.max(0,-swing)*.9));
+      const knee=multiply(hip,transform(0,-.45,0,1,1,1,crouch?1.7:!e.grounded?.6:Math.max(0,-swing)*.9));
       this.box(0,-.2,0,.215,.4,.25,'#203d51',0,0,0,0,knee);
       this.box(0,-.38,-.085,.28,.17,.47,e.sneakers>0?'#94ff78':'#f2c75c',0,0,0,e.sneakers>0?.65:0,knee);
       this.box(0,-.48,-.085,.29,.055,.48,'#f2ead4',0,0,0,0,knee);
@@ -208,7 +231,7 @@ export class WorldRenderer {
       this.box(e.x+.72,e.y+2.01,2.6,.45,.13,.13,'#f783ba',0,0,0,.8);
     }
     if(e.invulnerable>0){for(const s of [-1,1])this.box(e.x+s*.6,e.y+1,2.5,.028,1.6,.025,'#d2efff',0,0,0,1);}
-    const shadow=1-Math.min(e.y/6,.3);this.cylinder(menu?0:e.x,.01,2.55,.95*shadow,1.1*shadow,.008,'#21363d',Math.PI/2,0,0,.2);
+    const shadow=1-Math.min((e.y-e.floorHeight)/6,.3);this.cylinder(menu?0:e.x,(menu?0:e.floorHeight)+.01,2.55,.95*shadow,1.1*shadow,.008,'#21363d',Math.PI/2,0,0,.2);
   }
   bonus(p,t){
     const x=p.lane*LANE_WIDTH,z=2.5-p.ahead,y=p.y;
@@ -232,7 +255,47 @@ export class WorldRenderer {
     }
     this.cylinder(x,.035,z,.72,.72,.015,c,Math.PI/2,0,0,.45);
   }
-  scenery(distance,t){
+  ramp(o){
+    const length=o.halfLength*2,rise=o.to-o.from,angle=Math.atan2(rise,length),deck=Math.hypot(length,rise);
+    const x=o.lane*LANE_WIDTH,z=2.5-o.ahead,mid=(o.from+o.to)/2,parent=transform(x,mid,z,1,1,1,angle);
+    this.box(0,-.08,0,2.16,.16,deck,'#658c92',0,0,0,0,parent);
+    for(const side of [-1,1])this.box(side*1.01,.025,0,.095,.07,deck,'#ffdc81',0,0,0,.5,parent);
+    for(let i=1;i<7;i++){
+      const along=deck*(.5-i/7);
+      for(const side of [-1,1])this.box(side*.21,.025,along,.07,.025,.62,'#e0f4ed',0,side*.7,0,.65,parent);
+      const h=o.from+rise*i/7,worldZ=z+length*(.5-i/7);
+      for(const side of [-1,1])if(h>.3)this.box(x+side*.86,h/2-.09,worldZ,.12,h-.18,.15,'#314c59');
+    }
+  }
+  tunnelSection(section,distance){
+    const near=2.5-(section.start-distance),far=2.5-(section.end-distance);
+    const z1=Math.min(near,21),z2=Math.max(far,-210);if(z1<z2)return;
+    const mid=(z1+z2)/2,length=z1-z2;
+    for(const side of [-1,1]){
+      this.box(side*5.93,1.6,mid,.66,3.2,length,'#52676e');
+      this.box(side*5.58,1.03,mid,.055,.13,length,'#71bbc0',0,0,0,.55);
+      this.box(side*5.59,.36,mid,.05,.16,length,'#d2ad63');
+    }
+    for(let i=0;i<13;i++){const a=i*Math.PI/12;this.box(Math.cos(a)*TRACK.tunnelArchRadius,TRACK.tunnelArchBase+Math.sin(a)*TRACK.tunnelArchRadius,mid,1.62,.6,length,'#435862',0,0,a+Math.PI/2);}
+    for(let world=section.start;world<=section.end;world+=16){
+      const z=2.5-world+distance;if(z>21||z<-210)continue;
+      for(let i=0;i<13;i++){const a=i*Math.PI/12;this.box(Math.cos(a)*5.63,3.2+Math.sin(a)*5.63,z,1.58,.15,.22,'#8e998f',0,0,a+Math.PI/2);}
+      for(const side of [-1,1]){this.box(side*5.48,3.8,z,.18,1.4,.28,'#2a434d');this.box(side*5.34,3.8,z,.055,.87,.17,'#ffe4a9',0,0,0,1);this.box(side*4.92,.06,z,.55,.018,1.8,'#ac9563',0,0,0,.7);}
+    }
+    for(const portal of [near,far]){
+      if(portal>30||portal<-210)continue;
+      for(const side of [-1,1]){
+        this.box(side*6,1.6,portal,1.1,3.2,1.2,'#8c9182');
+        this.sphere(side*10,5.8,portal-9,8,13,24,'#6c7e74');this.sphere(side*8.8,4.5,portal-1,5.2,9.2,8,'#79857a');
+      }
+      for(let i=0;i<15;i++){const a=i*Math.PI/14;this.box(Math.cos(a)*6,3.2+Math.sin(a)*6,portal,1.42,1.05,1.2,i%2?'#9da18b':'#8c9586',0,0,a+Math.PI/2);}
+      this.sphere(0,13.5,portal-7,22,8.4,22,'#697d70');this.box(0,7.8,portal+.66,2.1,.57,.13,'#233f4a');
+      for(const side of [-1,1])this.box(side*.63,7.8,portal+.75,.12,.27,.04,'#ffcf78',0,0,side*.7,1);
+    }
+  }
+  scenery(distance,t,tunnels=[]){
+    const underground=z=>tunnels.some(s=>distance+2.5-z>=s.start&&distance+2.5-z<=s.end);
+
     this.box(0,-.6,-86,110,1,240,'#55727b');
     this.box(0,-.23,-85,8.8,.45,240,'#425b65');
     for(const lane of [-1,0,1]){
@@ -247,7 +310,7 @@ export class WorldRenderer {
       this.box(s*7.84,1.23,-85,.27,.1,240,'#a5b6ae');
       for(let i=0;i<40;i++){const z=18-i*5+(distance%5);this.box(s*4.87,.445,z,.09,.022,2.5,'#e4d29c');}
       for(let i=0;i<12;i++){
-        const z=15-i*19+(distance%19);
+        const z=15-i*19+(distance%19);if(underground(z))continue;
         this.box(s*6.7,2.95,z,.16,5.5,.2,'#456674');
         this.box(s*6.04,5.67,z,1.5,.13,.22,'#b6c9c3');
         this.box(s*5.88,5.59,z,.93,.035,.19,'#fff0bf',0,0,0,1);
@@ -257,7 +320,7 @@ export class WorldRenderer {
     }
     // A repeated canopy and catenary frame make the track read as a metro station.
     for(let i=0;i<6;i++){
-      const z=12-i*43+(distance%43);
+      const z=12-i*43+(distance%43);if(underground(z))continue;
       for(const s of [-1,1]){
         this.box(s*7.0,3.85,z,.42,7.0,.44,'#54737e');
         this.box(s*7.0,.88,z,.65,1.05,.7,'#6f8b92');
@@ -296,13 +359,16 @@ export class WorldRenderer {
     if(menu&&!this.reduceMotion)this.demoDistance+=dt*3.3;
     const distance=menu?this.demoDistance:e.distance;
     this.resize();this.cubes.count=0;this.cylinders.count=0;this.spheres.count=0;
-    this.scenery(distance,t);
+    this.scenery(distance,t,menu?[{start:60+distance,end:150+distance}]:e.tunnels);
+    if(!menu)for(const section of e.tunnels)this.tunnelSection(section,distance);
     if(menu){
-      this.train(-2.7,-15,'#2c999b');this.train(2.7,-39,'#e1a16f');
-      this.obstacle({type:'barrier',lane:0,ahead:39,row:0});
-      for(let i=0;i<10;i++)this.cylinder(0,1+Math.sin(t*2+i*.4)*.08,-5-i*2.8,.55,.55,.13,'#ffd458',0,t+i*.3,0,.65);
+      this.train(-2.7,-15,'#2c999b');
+      this.obstacle({type:'train',lane:0,ahead:53,halfLength:19,roofRoute:true,row:3});
+      this.ramp({type:'ramp',lane:0,ahead:27,halfLength:7,from:0,to:TRACK.roofHeight});
+      this.tunnelSection({start:60,end:150},0);
+      for(let i=0;i<14;i++){const ahead=6+i*3,h=Math.max(0,Math.min(1,(ahead-20)/14))*TRACK.roofHeight;this.cylinder(0,h+.95,2.5-ahead,.55,.55,.13,'#ffd458',0,t+i*.3,0,.65);}
     }else{
-      for(const o of e.obstacles)if(o.ahead<170)this.obstacle(o);
+      for(const o of e.obstacles)if(o.ahead-o.halfLength<180)this.obstacle(o);
       for(const p of e.pickups){
         const x=p.x??p.lane*LANE_WIDTH,z=2.5-p.ahead,y=p.y;
         if(p.type==='coin'){
@@ -323,10 +389,13 @@ export class WorldRenderer {
     this.shake=Math.max(0,this.shake-dt*3);
     const shake=this.reduceMotion?0:Math.sin(t*72)*this.shake*.08;
     const flight=e.jetpack>0||e.landing;
-    const eye=[this.camX+shake,menu?(mobile?3.4:4.3):5.2+(flight?e.y*.85:(this.reduceMotion?0:e.y*.12)),menu?(mobile?8.2:10):11.6];
-    const at=[menu?(mobile?1.2:1.1):this.camX*.7,menu?(mobile?-.7:.8):1.1+(flight?e.y*.7:0),-21];
+    const desiredHeight=menu?0:Math.max(e.floorHeight,e.y*(flight?.9:.65));this.camHeight+=(desiredHeight-this.camHeight)*(1-Math.exp(-5*dt));
+    const eye=[this.camX+shake,menu?(mobile?3.4:4.3):Math.min(e.environment==='tunnel'?8.3:20,5.2+this.camHeight*.9),menu?(mobile?8.2:10):11.6];
+    const at=[menu?(mobile?1.2:1.1):this.camX*.7,menu?(mobile?-.7:.8):1.1+this.camHeight*.8,-21];
     const vp=multiply(perspective((mobile?66:57)*Math.PI/180,this.canvas.width/this.canvas.height,.1,300),lookAt(eye,at));
-    const gl=this.gl;gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(this.program);gl.uniformMatrix4fv(this.viewUniform,false,vp);gl.uniform3fv(this.eyeUniform,eye);this.cubes.draw();this.cylinders.draw();this.spheres.draw();gl.bindVertexArray(null);
+    const gl=this.gl;const tunnel=menu?{start:60+distance,end:150+distance}:e.tunnels.find(s=>s.end>distance-15&&s.start<distance+210);
+    gl.useProgram(this.program);gl.uniform2fv(this.tunnelBoundsUniform,tunnel?[2.5-tunnel.end+distance,2.5-tunnel.start+distance]:[-10000,-9999]);gl.uniform1f(this.tunnelBlendUniform,menu?0:e.tunnelBlend);
+    gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(this.program);gl.uniformMatrix4fv(this.viewUniform,false,vp);gl.uniform3fv(this.eyeUniform,eye);this.cubes.draw();this.cylinders.draw();this.spheres.draw();gl.bindVertexArray(null);
   }
   dispose(){this.cubes.dispose();this.cylinders.dispose();this.spheres.dispose();this.gl.deleteProgram(this.program);}
 }
