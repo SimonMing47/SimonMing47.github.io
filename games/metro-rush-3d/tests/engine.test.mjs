@@ -36,12 +36,30 @@ test('pause freezes physics, bonus timers, combo and score; resume continues',()
 test('different bonuses coexist and repeated pickups refresh without stacking',()=>{
   const e=emptyGame();e.collectBonus('magnet');e.collectBonus('double');advance(e,2);e.collectBonus('magnet');assert.equal(e.magnet,BONUSES.magnet.duration);assert.ok(e.double>9.9&&e.double<10.1);e.collectBonus('double');assert.equal(e.multiplier,3);assert.equal(e.double,12);
 });
-test('magnet collects neighbouring lanes exactly once',()=>{const e=emptyGame();e.collectBonus('magnet');e.pickups=[e.item('coin',-1,7),e.item('coin',1,7)];advance(e,.1);assert.equal(e.coins,2);advance(e,.1);assert.equal(e.coins,2);advance(e,11);assert.equal(e.magnet,0);});
+test('magnet visibly moves coins across lanes and only scores on arrival',()=>{
+  const e=emptyGame();e.collectBonus('magnet');e.drainEvents();e.pickups=[e.item('coin',-1,7),e.item('coin',1,7)];
+  advance(e,.1);assert.equal(e.coins,0);assert.ok(e.pickups.every(p=>p.flight&&Math.abs(p.x)<2.7&&p.ahead>0&&p.trail.length>0));assert.equal(e.drainEvents().filter(x=>x.type==='coin').length,0);
+  advance(e,.3);assert.equal(e.coins,2);assert.equal(e.pickups.length,0);const events=e.drainEvents().filter(x=>x.type==='coin');assert.equal(events.length,2);assert.ok(events.every(x=>x.x===e.x&&x.ahead===0&&x.magnetic));advance(e,.5);assert.equal(e.coins,2);
+});
+test('ordinary pickup waits for physical contact and sweeps high-speed crossings',()=>{
+  const e=emptyGame();e.pickups=[e.item('coin',0,.95)];e.step(1/120);assert.equal(e.coins,0);assert.ok(e.pickups[0].ahead>.7);
+  advance(e,.04);assert.equal(e.coins,1);
+  const fast=emptyGame('expert');fast.distance=1e5;fast.pickups=[fast.item('coin',0,1.01)];fast.step(.05);assert.equal(fast.coins,1);assert.equal(fast.pickups.length,0);
+});
+test('coin sweep uses lane and height at contact, not the later end-of-frame pose',()=>{
+  const e=emptyGame('expert');e.distance=1e5;e.x=-1.4;e.lane=0;e.pickups=[e.item('coin',0,.45)];e.step(.05);assert.equal(e.coins,0);
+  const jump=emptyGame();jump.y=2;jump.pickups=[jump.item('coin',0,.35,.95)];jump.step(1/120);assert.equal(jump.coins,0);
+  const slide=emptyGame();slide.action('slide');slide.pickups=[slide.item('coin',0,1,.95),slide.item('coin',0,1,1.8)];slide.step(1/120);assert.equal(slide.coins,1);
+});
+test('magnet expiry finishes already attracted coins, and pause freezes their path',()=>{
+  const e=emptyGame();e.magnet=.04;e.pickups=[e.item('coin',1,7),e.item('coin',-1,15),e.item('coin',-1,7,6.1)];e.step(1/120);assert.ok(e.pickups[0].flight);assert.ok(!e.pickups[1].flight&&!e.pickups[2].flight);
+  e.pause();const frozen=JSON.stringify(e.pickups);advance(e,1);assert.equal(JSON.stringify(e.pickups),frozen);assert.equal(e.coins,0);e.resume();advance(e,.4);assert.equal(e.magnet,0);assert.equal(e.coins,1);assert.ok(e.pickups.every(p=>!p.flight));
+});
 test('double score applies only to newly earned points and preserves its ledger',()=>{
   const e=emptyGame('casual');advance(e,1);const initial=e.points;e.collectBonus('double');const before=e.distance;advance(e,1);assert.ok(Math.abs(e.points-initial-(e.distance-before)*2)<1e-6);e.double=0;const points=e.points,distance=e.distance;advance(e,1);assert.ok(Math.abs(e.points-points-(e.distance-distance))<1e-6);assert.ok(Math.abs(e.points-Object.values(e.stats).slice(0,3).reduce((a,b)=>a+b,0))<1e-6);
 });
 test('20/40 coin combos change multiplier, decay, and multiply with difficulty and x2',()=>{
-  const e=emptyGame('expert');e.collectBonus('magnet');e.pickups=Array.from({length:20},()=>e.item('coin',0,3));e.step(1/120);assert.equal(e.combo,20);assert.equal(e.multiplier,3);e.collectBonus('double');assert.equal(e.multiplier,6);e.pickups=Array.from({length:20},()=>e.item('coin',0,3));e.step(1/120);assert.equal(e.multiplier,8);advance(e,2.3);assert.equal(e.combo,0);assert.equal(e.maxCombo,40);assert.equal(e.multiplier,4);
+  const e=emptyGame('expert');e.collectBonus('magnet');e.pickups=Array.from({length:20},()=>e.item('coin',0,.2));e.step(1/120);assert.equal(e.combo,20);assert.equal(e.multiplier,3);e.collectBonus('double');assert.equal(e.multiplier,6);e.pickups=Array.from({length:20},()=>e.item('coin',0,.2));e.step(1/120);assert.equal(e.multiplier,8);advance(e,2.3);assert.equal(e.combo,0);assert.equal(e.maxCombo,40);assert.equal(e.multiplier,4);
 });
 test('mission bonuses are paid once, separately from multiplier scoring',()=>{
   const e=emptyGame();e.coins=50;e.distance=800;e.bonusCount=3;e.updateMissions();assert.equal(e.stats.bonusPoints,1900);e.updateMissions();assert.equal(e.stats.bonusPoints,1900);assert.equal(e.missions.filter(m=>m.done).length,3);
@@ -49,21 +67,57 @@ test('mission bonuses are paid once, separately from multiplier scoring',()=>{
 test('mystery rewards are deterministic, nonrecursive and count one collected item',()=>{
   for(let seed=0;seed<30;seed++){const a=emptyGame('classic',seed),b=emptyGame('classic',seed);a.collectBonus('mystery');b.collectBonus('mystery');assert.deepEqual(a.snapshot(),b.snapshot());assert.equal(a.bonusCount,1);assert.ok(a.coins>=25||a.boardCharges>1||['magnet','double','sneakers','jetpack'].some(k=>a[k]>0));}
 });
-test('every difficulty generates passable corridors, adjacent lane changes and safe gaps',()=>{
-  for(const mode of Object.keys(DIFFICULTIES))for(let seed=0;seed<35;seed++){
+test('generated rows require both jump and slide, preserve a reachable route and recovery time',()=>{
+  for(const mode of Object.keys(DIFFICULTIES))for(let seed=0;seed<20;seed++){
     const e=new RunnerEngine(seed,mode);e.obstacles=[];e.pickups=[];e.rows=0;e.nextRow=0;e.distance=0;
-    let priorSafe=[0],last=-Infinity;
+    let priorRoute=0,last=-Infinity;const actions=new Set();let mixed=0;
     for(let section=0;section<30;section++){
       e.distance=section*160;e.populate();const rows=new Map();for(const o of e.obstacles){if(!rows.has(o.row))rows.set(o.row,[]);rows.get(o.row).push(o);}
       for(const items of rows.values()){
         const pos=items[0].ahead+e.distance;if(pos<=last)continue;
-        assert.ok(items.length>=1&&items.length<=2);const free=[-1,0,1].filter(l=>!items.some(o=>o.lane===l));assert.ok(free.length>=1);
-        const reachable=free.filter(l=>priorSafe.some(previous=>Math.abs(l-previous)<=1));assert.ok(reachable.length>0);priorSafe=reachable;
-        if(Number.isFinite(last))assert.ok(pos-last>=e.config.minGap-.001);last=pos;
+        const {routeLane,required}=items[0];assert.ok(Math.abs(routeLane-priorRoute)<=1);priorRoute=routeLane;
+        if(required){actions.add(required);assert.equal(items.length,3);assert.deepEqual(items.map(o=>o.lane),[-1,0,1]);assert.equal(items.find(o=>o.lane===routeLane).type,required==='jump'?'barrier':'gate');if(items.some(o=>o.type==='train'))mixed++;}
+        else{assert.ok(items.length>=1&&items.length<=2);assert.ok(!items.some(o=>o.lane===routeLane));}
+        if(Number.isFinite(last)){const speed=Math.min(e.config.maxSpeed,e.config.startSpeed+last*e.config.acceleration);assert.ok(pos-last>=Math.max(e.config.minGap,speed*1.4+9.4)-.001);}
+        last=pos;
       }
-      // Keep the previously generated rows in the next relative coordinate frame.
       for(const o of e.obstacles)o.ahead-=160;for(const p of e.pickups)p.ahead-=160;e.obstacles=e.obstacles.filter(o=>o.ahead>-16);e.pickups=e.pickups.filter(p=>p.ahead>-8);
     }
+    assert.deepEqual([...actions].sort(),['jump','slide']);if(mode!=='casual')assert.ok(mixed>0);
+  }
+});
+test('three-lane action rows cannot be bypassed by standing or weaving through lane gaps',()=>{
+  for(const type of ['barrier','gate'])for(const x of [-2.7,-1.35,0,1.35,2.7])for(const dt of [1/120,.05]){
+    const e=emptyGame('expert');e.distance=1e5;e.x=x;e.lane=x<0?-1:1;
+    e.obstacles=[-1,0,1].map(lane=>({id:lane+3,type,ahead:1.01,lane,halfLength:.65}));
+    for(let i=0;i<20&&e.mode==='running';i++)e.step(dt);
+    assert.equal(e.mode,'over',`${type}, x=${x}, dt=${dt}`);
+  }
+});
+test('all action layouts accept correct moves and reject the opposite action',()=>{
+  for(const type of ['barrier','gate'])for(const mixed of [false,true])for(const correct of [false,true])for(const dt of [1/120,.05]){
+    const e=emptyGame('expert');e.distance=1e5;e.speed=42;
+    e.obstacles=[-1,0,1].map(lane=>({id:lane+3,type:mixed&&lane===-1?'train':type,lane,ahead:42*.4,halfLength:mixed&&lane===-1?4.4:.65}));
+    e.action((type==='barrier')===correct?'jump':'slide');
+    for(let i=0;i<Math.ceil(.8/dt)&&e.mode==='running';i++)e.step(dt);
+    assert.equal(e.mode,correct?'running':'over',`${type}, mixed=${mixed}, correct=${correct}, dt=${dt}`);
+  }
+});
+test('generated routes can be completed with timed jumps and slides, including speed caps and super jumps',()=>{
+  for(const mode of Object.keys(DIFFICULTIES))for(const dt of [1/120,.05])for(const superJump of [false,true])for(let seed=1;seed<=3;seed++){
+    const e=emptyGame(mode,seed);e.distance=1e5;e.nextRow=e.distance+70;e.rows=0;e.nextSafeLane=0;e.populate();const acted=new Set(),start=e.distance;
+    if(superJump)e.sneakers=1e5;
+    while(e.distance-start<2200&&e.mode==='running'){
+      e.pickups=[];
+      const next=e.obstacles.find(o=>o.ahead>-5);
+      if(next){
+        if(e.lane!==next.routeLane)e.action(e.lane<next.routeLane?'right':'left');
+        if(next.required&&next.ahead/e.speed<=.4&&!acted.has(next.row)){assert.ok(e.action(next.required),`${mode} ${next.required} rejected`);acted.add(next.row);}
+      }
+      e.step(dt);
+    }
+    assert.equal(e.mode,'running',`${mode}, dt=${dt}, super=${superJump}, seed=${seed}, distance=${e.distance-start}, reason=${e.reason}`);
+    assert.ok(acted.size>=8);
   }
 });
 test('bonus bag exposes all six pickup types before repeating',()=>{const e=emptyGame();e.bonusBag=[];const six=Array.from({length:6},()=>e.nextBonus());assert.equal(new Set(six).size,6);assert.deepEqual([...six].sort(),Object.keys(BONUSES).sort());});
@@ -72,3 +126,19 @@ test('long play keeps object counts bounded and restart clears all bonus state',
   for(const type of Object.keys(BONUSES))e.collectBonus(type);e.reset(47,'expert');assert.equal(e.mode,'menu');assert.equal(e.coins,0);assert.equal(e.combo,0);assert.equal(e.bonusCount,0);for(const k of ['magnet','double','sneakers','jetpack','board'])assert.equal(e[k],0);assert.equal(e.boardCharges,1);
 });
 test('3D hierarchy preserves translation, rotation and scale',()=>{const m=multiply(transform(3,4,5),transform(0,2,0,2,3,4));assert.deepEqual([m[12],m[13],m[14]],[3,6,5]);assert.deepEqual([m[0],m[5],m[10]],[2,3,4]);const r=multiply(transform(0,0,0,1,1,1,0,Math.PI/2),transform(0,0,-2));assert.ok(Math.abs(r[12]+2)<1e-6);assert.ok(Math.abs(r[14])<1e-6);});
+
+test('slide and protection expiry are evaluated at the actual swept contact time',()=>{
+  for(const field of ['slide','invulnerable']){
+    const e=emptyGame('expert');e.distance=1e5;e[field]=.007;obstacle(e,'gate',-.9);e.step(1/120);assert.equal(e.mode,'running',field);
+  }
+  const late=emptyGame('expert');late.distance=1e5;late.slide=.001;obstacle(late,'gate',1.1);late.step(1/120);assert.equal(late.mode,'over');
+  const board=emptyGame('expert');board.distance=1e5;board.board=.007;board.invulnerable=.001;obstacle(board,'barrier',1.1);board.obstacles.push({...board.obstacles[0],id:1000});board.step(1/120);assert.equal(board.mode,'running');assert.equal(board.savedCrashes,1);
+  const coin=emptyGame('expert');coin.distance=1e5;coin.slide=.007;coin.pickups=[coin.item('coin',0,1,1.8)];coin.step(1/120);assert.equal(coin.coins,0);
+});
+
+test('magnet activation catches nearby coins in either pickup array order',()=>{
+  for(const reverse of [false,true]){
+    const e=emptyGame('expert');e.distance=1e5;const magnet=e.item('magnet',0,.2),coin=e.item('coin',1,-.2);e.pickups=reverse?[coin,magnet]:[magnet,coin];
+    e.step(1/120);assert.ok(e.magnet>0);assert.ok(coin.flight);assert.equal(e.coins,0);advance(e,.4);assert.equal(e.coins,1);
+  }
+});

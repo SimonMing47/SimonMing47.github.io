@@ -1,4 +1,4 @@
-import { LANE_WIDTH, randomSource, BONUSES } from './engine.js';
+import { LANE_WIDTH, randomSource, BONUSES, pickupPose } from './engine.js';
 
 const vertexSource = `#version 300 es
 precision highp float;
@@ -134,6 +134,7 @@ export class WorldRenderer {
     if(o.type==='barrier'){
       this.box(x,.57,z,2,.85,.7,'#dc7350');this.box(x,1.04,z,2.13,.12,.85,'#ffdf8c');
       for(let i=-2;i<=2;i++)this.box(x+i*.4,.58,z+.361,.17,.64,.025,'#fce6b7',0,0,-.38);
+      if(o.required==='jump'){this.box(x,1.63,z,.095,.52,.085,'#fff1ba',0,0,0,1);for(const side of [-1,1])this.box(x+side*.13,1.77,z,.08,.35,.085,'#fff1ba',0,0,side*.72,1);}
       for(const s of [-1,1]){this.box(x+s*.85,.12,z,.22,.24,1,'#243d49');this.box(x+s*.84,1.17,z,.13,.16,.14,'#ffd674',0,0,0,1);}
     }else{
       for(const s of [-1,1]){this.box(x+s*1.01,1.48,z,.14,2.96,.3,'#d69d5c');this.box(x+s*1.01,.15,z,.45,.3,.65,'#274955');}
@@ -195,12 +196,22 @@ export class WorldRenderer {
       for(const s of [-1,1])this.box(s*.3,-.04,0,.055,.07,1.2,'#9beaff',0,0,0,1,board);
       for(let i=0;i<4;i++)this.box(e.x,e.y+.06,3.5+i*.55,.14/(i+1),.025,.34,'#bba7ff',0,0,0,1);
     }
-    if(e.magnet>0)for(let i=0;i<5;i++){const angle=t*3+i*Math.PI*2/5;this.sphere(e.x+Math.cos(angle)*.72,e.y+1+Math.sin(angle*2)*.2,2.5+Math.sin(angle)*.72,.055,.055,.055,'#ff9dcb',1);}
+    if(e.magnet>0){
+      const target=pickupPose(e),pulse=this.reduceMotion?0:Math.sin(t*5)*.08;
+      // A readable magnetic field, an equipped magnet and orbiting sparks persist.
+      for(let ring=0;ring<2;ring++)for(let i=0;i<32;i++){
+        const a=i*Math.PI/16+(this.reduceMotion?0:t*(ring?-.8:.8)),r=1.02+ring*.29+pulse;
+        this.box(e.x+Math.sin(a)*r,e.y+.1+ring*.15,2.5+Math.cos(a)*r,.045,.04,.26,ring?'#f58fcb':'#ffe0f2',0,a,0,1);
+      }
+      for(let i=0;i<6;i++){const a=t*2+i*Math.PI/3;this.sphere(e.x+Math.cos(a)*.9,target.y+Math.sin(a*2)*.35,2.5+Math.sin(a)*.85,.11,.11,.11,'#ffaad6',1);}
+      for(const side of [-1,1]){this.box(e.x+.72+side*.16,e.y+2.23,2.6,.13,.43,.13,'#f783ba',0,0,0,.8);this.box(e.x+.72+side*.16,e.y+2.4,2.6,.14,.13,.14,'#fff0fa',0,0,0,1);}
+      this.box(e.x+.72,e.y+2.01,2.6,.45,.13,.13,'#f783ba',0,0,0,.8);
+    }
     if(e.invulnerable>0){for(const s of [-1,1])this.box(e.x+s*.6,e.y+1,2.5,.028,1.6,.025,'#d2efff',0,0,0,1);}
     const shadow=1-Math.min(e.y/6,.3);this.cylinder(menu?0:e.x,.01,2.55,.95*shadow,1.1*shadow,.008,'#21363d',Math.PI/2,0,0,.2);
   }
   bonus(p,t){
-    const x=p.lane*LANE_WIDTH,z=2.5-p.ahead,y=p.y+Math.sin(t*3+p.id)*.12;
+    const x=p.lane*LANE_WIDTH,z=2.5-p.ahead,y=p.y;
     const parent=transform(x,y,z,1,1,1,0,Math.sin(t*1.3+p.id)*.45);
     const c=BONUSES[p.type].color;
     // Distinct solid silhouettes make pickups legible before their UI labels appear.
@@ -278,7 +289,7 @@ export class WorldRenderer {
     this.box(0,10,-150,85,1.2,5,'#738e92');
     for(const x of [-24,-13,13,24])this.box(x,4.5,-150,1.8,10,4,'#6d898f');
   }
-  burst(p){for(let i=0;i<5;i++)this.particles.push({x:p.lane*LANE_WIDTH,y:p.y,z:2.5-p.ahead,vx:(Math.random()-.5)*3,vy:1.5+Math.random()*2,vz:2+Math.random()*2,life:.45});if(this.particles.length>100)this.particles.splice(0,this.particles.length-100);}
+  burst(p){for(let i=0;i<7;i++)this.particles.push({x:p.x??p.lane*LANE_WIDTH,y:p.y,z:2.5-p.ahead,vx:(Math.random()-.5)*3,vy:1.5+Math.random()*2,vz:2+Math.random()*2,life:.45,color:p.magnetic?'#ffc1e6':'#ffe29a'});if(this.particles.length>100)this.particles.splice(0,this.particles.length-100);}
   render(e,dt){
     const menu=e.mode==='menu';const moving=e.mode==='running'||menu;
     if(moving)this.visualTime+=dt;const t=this.visualTime;
@@ -293,8 +304,9 @@ export class WorldRenderer {
     }else{
       for(const o of e.obstacles)if(o.ahead<170)this.obstacle(o);
       for(const p of e.pickups){
-        const x=p.lane*LANE_WIDTH,z=2.5-p.ahead,y=p.y+Math.sin(t*3+p.id)*.1;
+        const x=p.x??p.lane*LANE_WIDTH,z=2.5-p.ahead,y=p.y;
         if(p.type==='coin'){
+          if(p.flight)for(let i=0;i<p.trail.length;i++){const point=p.trail[i],size=.04+i*.01;this.sphere(point.x,point.y,2.5-point.ahead,size,size,size,i%2?'#ffc2e2':'#ffe6a0',1);}
           const parent=transform(x,y,z,1,1,1,0,t*2.6+p.id*.3);
           this.cylinder(0,0,0,.58,.58,.12,'#f5c654',0,0,0,.65,parent);
           this.cylinder(0,0,.067,.39,.39,.025,'#ffe49a',0,0,0,.8,parent);
@@ -303,7 +315,7 @@ export class WorldRenderer {
       }
     }
     this.player(e,t,menu);
-    for(const p of this.particles){if(moving){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy-=8*dt;p.z+=p.vz*dt;}const s=Math.max(.001,p.life*.15);this.box(p.x,p.y,p.z,s,s,s,'#ffe29a',t,t,0,1);}
+    for(const p of this.particles){if(moving){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy-=8*dt;p.z+=p.vz*dt;}const s=Math.max(.001,p.life*.15);this.box(p.x,p.y,p.z,s,s,s,p.color,t,t,0,1);}
     this.particles=this.particles.filter(p=>p.life>0);
     const mobile=this.canvas.clientWidth<760;
     const targetX=menu?(mobile?-2.1:-3.0):e.x*.18;

@@ -6,6 +6,7 @@ const remembered=storage.get('metro-rush-difficulty','classic');
 let difficulty=Object.hasOwn(DIFFICULTIES,remembered)?remembered:'classic';
 const engine=new RunnerEngine(undefined,difficulty);
 let renderer,soundOn=storage.get('metro-rush-sound','off')==='on',audioContext,previousTime=0,accumulator=0,uiTime=0,toastTimer,stopped=false,lastCoinTone=-Infinity,pointer=null,lastTap=0;
+let noticeTimer,guideResume=false;
 let records={};try{records=JSON.parse(storage.get('metro-rush-records-v2','{}'));}catch{}
 if(!records||typeof records!=='object')records={};
 for(const key of Object.keys(DIFFICULTIES)){
@@ -28,14 +29,32 @@ function tone(type){
   gain.gain.setValueAtTime(n[3],now);gain.gain.exponentialRampToValueAtTime(.001,now+n[2]);osc.connect(gain);gain.connect(audioContext.destination);osc.start();osc.stop(now+n[2]);osc.onended=()=>{osc.disconnect();gain.disconnect();};
 }
 function toast(message,duration=2500){clearTimeout(toastTimer);$('toast').textContent=message;$('toast').classList.add('visible');toastTimer=setTimeout(()=>$('toast').classList.remove('visible'),duration);}
+const iconPaths={
+  magnet:'<path d="M5 4v9a7 7 0 0 0 14 0V4h-5v9a2 2 0 0 1-4 0V4H5Z"/><path d="M5 8h5m4 0h5"/>',
+  double:'<path d="m3 10 6 7m0-7-6 7m11-6c0-5 7-5 7-1 0 2-7 5-7 8h7"/>',
+  sneakers:'<path d="M3 14V8h4l3 5 6 2h3a2 2 0 0 1 2 2v3H3v-6Zm0 3h18m-11-4 2-2m1 3 2-2M13 6l3-3 3 3m-3-3v7"/>',
+  jetpack:'<path d="M8 15V7a4 4 0 0 1 8 0v8H8Zm0-6L4 12v5l4-2m8-6 4 3v5l-4-2M9 18l-1 3m4-3v4m3-4 1 3"/><circle cx="12" cy="8" r="1"/>',
+  board:'<rect x="8" y="2" width="8" height="20" rx="4" transform="rotate(35 12 12)"/><path d="m12 7-4 6m8-2-4 6"/>',
+  mystery:'<rect x="3" y="7" width="18" height="4" rx="1"/><path d="M5 11v10h14V11M12 7v14m0-14C4 8 5 1 8 3l4 4c8 1 7-6 4-4l-4 4Z"/>'
+};
+const icon=key=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${iconPaths[key]}</svg>`;
 function setupBonuses(){
-  $('bonus-grid').innerHTML=Object.entries(BONUSES).map(([key,b])=>`<button class="bonus-tile" data-bonus="${key}" style="--bonus:${b.color}" aria-label="了解${b.name}"><span class="bonus-icon" aria-hidden="true">${b.glyph}</span><span>${b.short}</span></button>`).join('');
-  $('power-bar').innerHTML=Object.entries(BONUSES).filter(([key])=>key!=='mystery').map(([key,b])=>`<div class="active-power" id="power-${key}" style="--bonus:${b.color}" hidden><span class="power-glyph" aria-hidden="true">${b.glyph}</span><small id="seconds-${key}"></small><span class="power-track"><i id="fill-${key}"></i></span></div>`).join('');
+  $('bonus-grid').innerHTML=Object.entries(BONUSES).map(([key,b])=>`<button class="bonus-tile" data-bonus="${key}" style="--bonus:${b.color}" aria-label="了解${b.name}"><span class="bonus-icon">${icon(key)}</span><span>${b.short}</span></button>`).join('');
+  $('power-bar').innerHTML=Object.entries(BONUSES).filter(([key])=>key!=='mystery').map(([key,b])=>`<div class="active-power" id="power-${key}" style="--bonus:${b.color}" hidden><span class="power-glyph">${icon(key)}</span><span class="power-name">${b.short}</span><small id="seconds-${key}"></small><span class="power-track"><i id="fill-${key}"></i></span></div>`).join('');
+  $('board-icon').innerHTML=icon('board');
   for(const button of document.querySelectorAll('[data-bonus]'))button.addEventListener('click',()=>showGuide(button.dataset.bonus));
+}
+function announceBonus(type,duration){
+  const b=BONUSES[type];clearTimeout(noticeTimer);$('bonus-notice').style.setProperty('--bonus',b.color);
+  $('notice-icon').innerHTML=icon(type);$('notice-title').textContent=b.name+'已生效';
+  $('notice-detail').textContent=type==='magnet'?'金币正在沿光迹飞向你':type==='board'?'抵挡一次碰撞':`${Math.ceil(duration)} 秒 · ${b.description}`;
+  $('bonus-notice').classList.add('visible');noticeTimer=setTimeout(()=>$('bonus-notice').classList.remove('visible'),2800);
 }
 function updateMenu(){
   const d=DIFFICULTIES[difficulty];$('app').dataset.difficulty=difficulty;
-  $('difficulty-hint').textContent=d.hint;$('difficulty-speed').textContent=`${Math.round(d.startSpeed*3.6)} → ${Math.round(d.maxSpeed*3.6)} km/h`;
+  $('difficulty-hint').textContent=d.hint;$('difficulty-speed').textContent=`${Math.round(d.startSpeed*3.6)} km/h 起步`;
+  $('difficulty-pattern').textContent={casual:'从换道练习起步，逐步加入跳跃与滑铲。',classic:'交错列车与跳滑组合，熟悉每一段节奏。',expert:'更早遇到连续跳滑，快节奏中准确选道。'}[difficulty];
+  $('difficulty-reward').textContent=`${multiplierText(d.multiplier)} 积分`;$('difficulty-boards').textContent=`${d.boards} 块滑板`;$('start-label').textContent=`开始 · ${d.name}模式`;
   $('best').textContent=format(records[difficulty].score);$('best-distance').textContent=format(records[difficulty].distance);
   $('mode-badge').textContent=`${d.name} · ${d.english}`;
   for(const label of document.querySelectorAll('.difficulty-card')){const selected=label.dataset.mode===difficulty;label.classList.toggle('selected',selected);label.querySelector('input').checked=selected;}
@@ -44,10 +63,15 @@ function chooseDifficulty(value){
   if(engine.mode!=='menu'||!Object.hasOwn(DIFFICULTIES,value))return false;
   difficulty=value;storage.set('metro-rush-difficulty',value);engine.reset(undefined,difficulty);updateMenu();return true;
 }
-function showGuide(selected){
-  if(engine.mode==='running')showPause();
-  $('guide-list').innerHTML=Object.entries(BONUSES).map(([key,b])=>`<article class="guide-entry${key===selected?' highlight':''}" id="guide-${key}" style="--bonus:${b.color}"><span class="bonus-icon" aria-hidden="true">${b.glyph}</span><div><strong>${b.name}</strong><small>${b.duration?`${+(b.duration*DIFFICULTIES[difficulty].bonusScale).toFixed(1)} 秒${key==='board'?' · 主动使用':''}`:'立即生效'}</small><p>${b.description}</p></div></article>`).join('');
-  $('bonus-guide').showModal();if(selected)$(`guide-${selected}`).scrollIntoView({block:'nearest'});
+function selectGuide(selected='magnet'){
+  const b=BONUSES[selected],duration=b.duration*DIFFICULTIES[difficulty].bonusScale;
+  if(!$('guide-tabs').childElementCount)$('guide-tabs').innerHTML=Object.entries(BONUSES).map(([key,item])=>`<button data-guide-bonus="${key}" aria-pressed="${key===selected}" style="--bonus:${item.color}">${icon(key)}<span>${item.short}</span></button>`).join('');
+  for(const button of $('guide-tabs').querySelectorAll('button'))button.setAttribute('aria-pressed',String(button.dataset.guideBonus===selected));
+  $('guide-list').innerHTML=`<article class="guide-entry" style="--bonus:${b.color}"><span class="guide-hero-icon">${icon(selected)}</span><div><strong>${b.name}</strong><small>${b.duration?`${+duration.toFixed(1)} 秒${selected==='board'?' · 主动使用':''}`:'立即生效'}</small><p>${b.description}</p></div></article>`;
+}
+function showGuide(selected='magnet'){
+  if($('bonus-guide').open)return;guideResume=engine.mode==='running';if(guideResume)showPause();
+  selectGuide(selected);$('bonus-guide').showModal();
 }
 function syncUI(){
   const menu=engine.mode==='menu',running=engine.mode==='running';
@@ -65,6 +89,10 @@ function syncUI(){
     if(seconds>0){active++;$(`seconds-${key}`).textContent=`${Math.ceil(seconds)}s`;$(`fill-${key}`).style.transform=`scaleX(${seconds/(b.duration*engine.config.bonusScale)})`;el.classList.toggle('expiring',seconds<3);el.setAttribute('aria-label',`${b.name}，剩余 ${Math.ceil(seconds)} 秒`);}
   }
   $('power-bar').hidden=!running||active===0;
+  const upcoming=engine.obstacles.find(o=>o.required&&!o.broken&&o.ahead>0&&o.ahead/engine.speed<1.8);
+  $('action-cue').hidden=!running||!upcoming||engine.jetpack>0||engine.landing;
+  if(upcoming){$('action-symbol').textContent=upcoming.required==='jump'?'↑':'↓';$('action-label').textContent=upcoming.required==='jump'?'前方跳跃':'前方滑铲';$('action-distance').textContent=`${Math.ceil(upcoming.ahead)} 米 · ${engine.obstacles.some(o=>o.row===upcoming.row&&o.type==='train')?'先避开列车':upcoming.required==='jump'?'↑ / 上滑':'↓ / 下滑'}`;$('action-cue').dataset.action=upcoming.required;}
+
   $('board-count').textContent=engine.boardCharges;$('board-action').disabled=engine.board>0||engine.boardCharges===0||engine.jetpack>0||engine.landing;
   $('board-hint').textContent=engine.board>0?`保护中 · ${Math.ceil(engine.board)}s`:engine.jetpack>0?'飞行中':engine.boardCharges===0?'拾取滑板补充':'B / 双击使用';
   const mission=engine.missions.find(m=>!m.done);
@@ -73,7 +101,7 @@ function syncUI(){
 function startRun(){
   if(stopped||!renderer||(engine.mode!=='menu'&&engine.mode!=='over'))return false;
   unlockAudio();engine.reset(undefined,difficulty);engine.start();renderer.particles=[];accumulator=0;lastTap=0;
-  clearTimeout(toastTimer);$('toast').classList.remove('visible');syncUI();$('pause').focus({preventScroll:true});
+  clearTimeout(toastTimer);clearTimeout(noticeTimer);$('bonus-notice').classList.remove('visible');$('toast').classList.remove('visible');syncUI();$('pause').focus({preventScroll:true});
   toast(`${engine.config.name}模式 · ${engine.boardCharges} 块滑板已就绪`,2200);return true;
 }
 function showPause(){
@@ -90,11 +118,11 @@ function showGameOver(){
   const complete=engine.missions.filter(m=>m.done).length;$('result-reward').textContent=`完成挑战 ${complete}/3 · 滑板护身 ${engine.savedCrashes} 次 · 奖励分 +${format(engine.stats.bonusPoints)}`;
   $('resume').textContent='再跑一次 ↗';renderer.shake=1;syncUI();$('resume').focus({preventScroll:true});
 }
-function goHome(){engine.reset(undefined,difficulty);accumulator=0;renderer.particles=[];clearTimeout(toastTimer);$('toast').classList.remove('visible');updateMenu();syncUI();$('start').focus({preventScroll:true});}
+function goHome(){engine.reset(undefined,difficulty);accumulator=0;renderer.particles=[];clearTimeout(toastTimer);clearTimeout(noticeTimer);$('bonus-notice').classList.remove('visible');$('toast').classList.remove('visible');updateMenu();syncUI();$('start').focus({preventScroll:true});}
 function events(){
   for(const e of engine.drainEvents()){
     tone(e.type);if(e.type==='coin')renderer.burst(e);
-    if(['magnet','double','sneakers','jetpack','board'].includes(e.type))toast(`${BONUSES[e.type].name} · ${Math.ceil(e.duration)} 秒`);
+    if(['magnet','double','sneakers','jetpack','board'].includes(e.type))announceBonus(e.type,e.duration);
     if(e.type==='boardPickup')toast('获得护航滑板 · 按 B / 双击启用');
     if(e.type==='shieldBreak'){renderer.shake=.6;toast('滑板已护身 · 继续冲刺！');}
     if(e.type==='landing')toast('安全降落 · 准备接回轨道');
@@ -126,6 +154,8 @@ for(const button of document.querySelectorAll('[data-action]')){
 $('difficulties').addEventListener('change',event=>chooseDifficulty(event.target.value));
 $('start').addEventListener('click',startRun);$('pause').addEventListener('click',showPause);$('resume').addEventListener('click',()=>engine.mode==='paused'?resumeRun():startRun());$('home').addEventListener('click',goHome);
 $('board-action').addEventListener('click',()=>{unlockAudio();engine.action('board');});
+$('guide-tabs').addEventListener('click',event=>{const button=event.target.closest('[data-guide-bonus]');if(button)selectGuide(button.dataset.guideBonus);});
+$('bonus-guide').addEventListener('close',()=>{if(guideResume&&engine.mode==='paused')resumeRun();guideResume=false;});
 $('guide').addEventListener('click',()=>showGuide());$('close-guide').addEventListener('click',()=>$('bonus-guide').close());
 $('sound').addEventListener('click',()=>{soundOn=!soundOn;storage.set('metro-rush-sound',soundOn?'on':'off');setSoundUI();unlockAudio();tone('coin');});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)showPause();previousTime=0;});window.addEventListener('blur',()=>{showPause();pointer=null;lastTap=0;});

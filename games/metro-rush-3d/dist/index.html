@@ -24,41 +24,42 @@
   </header>
   <section class="hud" id="hud" aria-label="当前成绩" hidden>
     <div class="score-block"><span class="hud-label">本次得分</span><div><strong id="score">0</strong><span class="multiplier" id="multiplier">×1.5</span></div><span class="distance-line"><b id="distance">0</b> m <i></i><span id="speed">65 km/h</span></span></div>
-    <div class="collect-block"><div><span class="coin-symbol" aria-hidden="true">◆</span><strong id="coins">0</strong></div><span>最高分 <b id="hud-best">0</b></span></div>
+    <div class="collect-block"><div><span class="coin-symbol" aria-hidden="true">Ⅱ</span><strong id="coins">0</strong></div><span>最高分 <b id="hud-best">0</b></span></div>
     <div class="stage-block"><div><span id="zone">LV.1 热身起跑</span><span id="next-stage">下一等级 600 m</span></div><span class="stage-track"><span id="stage-fill"></span></span></div>
   </section>
   <section id="menu" aria-labelledby="game-title">
-    <div class="title-lockup"><span class="edition-label"><i></i> CITY RUN / 02</span><h1 id="game-title">METRO<br><em>RUSH<span>.</span></em></h1><p>你的下一程，不止是跑得更远。</p></div>
-    <div class="launch-panel">
-      <div class="section-top"><h2>选择你的节奏</h2><span>SELECT MODE</span></div>
-      <fieldset class="difficulty-options" id="difficulties"><legend class="sr-only">选择难度</legend>
-        <label class="difficulty-card" data-mode="casual"><input type="radio" name="difficulty" value="casual"><span class="mode-rank">I</span><strong>休闲</strong><small>CHILL</small><span class="mode-rate">×1 积分</span></label>
-        <label class="difficulty-card selected" data-mode="classic"><input type="radio" name="difficulty" value="classic" checked><span class="mode-rank">II</span><strong>经典</strong><small>FLOW</small><span class="mode-rate">×1.5 积分</span></label>
-        <label class="difficulty-card" data-mode="expert"><input type="radio" name="difficulty" value="expert"><span class="mode-rank">III</span><strong>极限</strong><small>RUSH</small><span class="mode-rate">×2 积分</span></label>
-      </fieldset>
-      <div class="difficulty-description"><p id="difficulty-hint">交错障碍，畅快连招</p><span id="difficulty-speed">65 → 122 km/h</span></div>
-      <button class="primary-button" id="start"><span>开跑！<small>LET'S RUSH</small></span><span class="button-arrow" aria-hidden="true">↗</span></button>
-      <div class="best-strip"><span>本难度纪录</span><strong id="best">0</strong><span>分</span><span class="best-distance"><b id="best-distance">0</b> m</span></div>
+    <div class="lobby">
+      <div class="title-lockup"><span class="edition-label">城市轨道 · 无尽挑战</span><h1 id="game-title">METRO <em>RUSH<span>.</span></em></h1><p>换道、跃起、滑行。跑出你的节奏。</p></div>
+      <div class="launch-panel">
+        <div class="section-top"><h2>选择难度</h2><span>01 — 03</span></div>
+        <fieldset class="difficulty-options" id="difficulties" aria-describedby="difficulty-hint difficulty-pattern"><legend class="sr-only">选择难度</legend>
+          <label class="difficulty-card" data-mode="casual"><input type="radio" name="difficulty" value="casual"><span class="mode-level" aria-hidden="true"><i></i><i></i><i></i></span><strong>休闲</strong><small>从容起步</small><span class="mode-check" aria-hidden="true">✓</span></label>
+          <label class="difficulty-card selected" data-mode="classic"><input type="radio" name="difficulty" value="classic" checked><span class="mode-level" aria-hidden="true"><i></i><i></i><i></i></span><strong>经典</strong><small>进入节奏</small><span class="mode-check" aria-hidden="true">✓</span></label>
+          <label class="difficulty-card" data-mode="expert"><input type="radio" name="difficulty" value="expert"><span class="mode-level" aria-hidden="true"><i></i><i></i><i></i></span><strong>极限</strong><small>挑战反应</small><span class="mode-check" aria-hidden="true">✓</span></label>
+        </fieldset>
+        <div class="difficulty-description" aria-live="polite"><strong id="difficulty-hint">交错障碍，畅快连招</strong><p id="difficulty-pattern">换道与跳跃、滑铲组合，逐段加速。</p><div class="mode-facts"><span id="difficulty-speed">65 km/h 起步</span><span id="difficulty-reward">×1.5 积分</span><span id="difficulty-boards">1 块滑板</span></div></div>
+        <button class="primary-button" id="start"><span id="start-label">开始 · 经典模式</span><span class="button-arrow" aria-hidden="true">→</span></button>
+        <div class="best-strip"><span>个人最佳</span><strong id="best">0</strong><span>分</span><span class="best-distance"><b id="best-distance">0</b> m</span></div>
+        <aside class="bonus-dock" id="bonus-dock" aria-label="点击查看道具详情"><div class="section-top"><h2>沿途道具</h2><span>点击了解效果</span></div><div class="bonus-grid" id="bonus-grid"></div></aside>
+      </div>
     </div>
+    <div class="scene-caption" aria-hidden="true"><span>中央车站</span><i></i><span>下一站，由你出发</span></div>
   </section>
-  <aside class="bonus-dock" id="bonus-dock" aria-label="奖励图鉴">
-    <div class="section-top"><h2>让这一程更精彩</h2><span>BONUS DROP</span></div>
-    <div class="bonus-grid" id="bonus-grid"></div>
-    <div class="bonus-tip"><span class="tip-spark">✦</span><p>不同道具可以同时生效<br><strong>20 / 40 连币，解锁额外倍率</strong></p></div>
-  </aside>
   <aside class="controls-guide" id="controls-guide" aria-label="操作说明"><span><kbd>←</kbd><kbd>→</kbd> 换道</span><span><kbd>↑</kbd> 跳跃</span><span><kbd>↓</kbd> 滑铲</span><span><kbd>B</kbd> 滑板</span><span class="touch-hint">手机滑动操作 · 双击启动滑板</span></aside>
+  <div id="action-cue" class="action-cue" role="status" hidden><span id="action-symbol" aria-hidden="true">↑</span><div><strong id="action-label">前方跳跃</strong><small id="action-distance"></small></div></div>
+  <div id="bonus-notice" class="bonus-notice" role="status"><span id="notice-icon" aria-hidden="true"></span><div><strong id="notice-title"></strong><small id="notice-detail"></small></div></div>
   <div id="toast" role="status" class="toast"></div>
-  <div id="combo-panel" class="combo-panel" hidden><strong id="combo-count">0</strong><span>COIN COMBO</span><b id="combo-label">连续收集</b><span class="combo-track"><i id="combo-fill"></i></span></div>
+  <div id="combo-panel" class="combo-panel" hidden><strong id="combo-count">0</strong><span>连币</span><b id="combo-label">连续收集</b><span class="combo-track"><i id="combo-fill"></i></span></div>
   <aside id="mission-panel" class="mission-panel" hidden><span class="mission-tag">本局挑战</span><div><strong id="mission-name">收集 50 枚金币</strong><b id="mission-reward">+500 分</b></div><span class="mission-track"><i id="mission-fill"></i></span><span id="mission-progress">0 / 50</span></aside>
   <div id="power-bar" class="power-bar" aria-label="生效中的道具" hidden></div>
-  <button id="board-action" class="board-action" hidden aria-label="使用护航滑板"><span aria-hidden="true">▱</span><div><strong>护航滑板</strong><small id="board-hint">按 B 使用</small></div><b id="board-count">1</b></button>
+  <button id="board-action" class="board-action" hidden aria-label="使用护航滑板"><span id="board-icon" aria-hidden="true"></span><div><strong>护航滑板</strong><small id="board-hint">按 B 使用</small></div><b id="board-count">1</b></button>
   <div id="touch-controls" class="touch-controls" aria-label="触屏操作" hidden><button data-action="left" aria-label="向左换道">←</button><button data-action="slide" aria-label="滑铲">↓</button><button data-action="jump" aria-label="跳跃">↑</button><button data-action="right" aria-label="向右换道">→</button></div>
   <section id="overlay" class="overlay" aria-modal="true" role="dialog" aria-labelledby="overlay-title" hidden><div class="result-panel">
     <span class="eyebrow" id="result-eyebrow">TAKE A BREATHER</span><h2 id="overlay-title">歇一口气</h2><p id="overlay-message">轨道在等你，准备好就继续。</p>
     <div id="result-stats" hidden><div class="result-score"><span>本次得分</span><strong id="result-score">0</strong><span id="result-mode">经典 · 基础倍率 ×1.5</span></div><div class="result-grid"><div><span>奔跑距离</span><strong id="result-distance">0 m</strong></div><div><span>收集金币</span><strong id="result-coins">0</strong></div><div><span>最高连币</span><strong id="result-combo">0</strong></div><div><span>道具拾取</span><strong id="result-bonuses">0</strong></div></div><div class="result-reward" id="result-reward"></div></div>
     <button id="resume" class="primary-button">继续奔跑 →</button><button id="home" class="text-button">返回起点 · 调整难度</button>
   </div></section>
-  <dialog id="bonus-guide" class="guide-dialog" aria-labelledby="guide-title"><div class="guide-dialog-top"><div><span class="eyebrow">RUN SMARTER</span><h2 id="guide-title">掌握你的奖励</h2></div><button id="close-guide" class="icon-button" aria-label="关闭指南">×</button></div><div class="guide-list" id="guide-list"></div><div class="guide-notes"><p><b>连币加成</b>　20 连 ×1.5，40 连 ×2；与难度和双倍积分相乘。</p><p><b>本局挑战</b>　50 金币 +500 分，800 米 +800 分，3 道具 +600 分。</p><p><b>操作</b>　方向键 / WASD 换道、跳跃、滑铲；空格跳跃；B / 手机双击启用滑板；P / Esc 暂停。</p><p>同类道具刷新时长；休闲时长 +25%，极限时长 −15%。飞行结束安全落地，滑板抵挡一次碰撞后消耗。</p></div></dialog>
+  <dialog id="bonus-guide" class="guide-dialog" aria-labelledby="guide-title"><div class="guide-dialog-top"><div><span class="eyebrow">METRO RUSH</span><h2 id="guide-title">跑酷指南</h2></div><button id="close-guide" class="icon-button" aria-label="关闭指南">×</button></div><nav id="guide-tabs" class="guide-tabs" aria-label="道具选择"></nav><div class="guide-list" id="guide-list" aria-live="polite"></div><details class="guide-notes"><summary>操作与得分规则</summary><p><b>连币加成</b>　20 连 ×1.5，40 连 ×2；与难度和双倍积分相乘。</p><p><b>本局挑战</b>　50 金币 +500 分，800 米 +800 分，3 道具 +600 分。</p><p><b>操作</b>　方向键 / WASD 换道、跳跃、滑铲；空格跳跃；B / 手机双击启用滑板；P / Esc 暂停。</p><p>同类道具刷新时长；休闲时长 +25%，极限时长 −15%。飞行结束安全落地，滑板抵挡一次碰撞后消耗。</p><p><b>路段提示</b>　整排低障碍需要跳跃，整排横杆需要滑铲；列车组合还需提前选道。</p></details></dialog>
   <div id="error" class="error-panel" role="alert" hidden><h2>暂时无法启动 3D 场景</h2><p id="error-text">请使用支持 WebGL 2 的浏览器，并启用硬件加速。</p><button class="primary-button" onclick="location.reload()">重新加载</button></div>
   <noscript><div class="error-panel"><h2>请启用 JavaScript 后开始游戏</h2></div></noscript>
 </main>

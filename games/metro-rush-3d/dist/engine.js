@@ -7,7 +7,7 @@ export const DIFFICULTIES = Object.freeze({
   expert: Object.freeze({ name:'极限', english:'RUSH', startSpeed:23, maxSpeed:42, acceleration:.008, gap:31, minGap:26, multiplier:2, firstRow:56, stageLength:500, bonusScale:.85, boards:1, comboWindow:2.2, hint:'高速密集，挑战反应', color:'#f595bf' })
 });
 export const BONUSES = Object.freeze({
-  magnet: { name:'金币磁铁', short:'磁铁', glyph:'U', color:'#f17cb0', duration:10, description:'自动吸附附近三条轨道的金币。' },
+  magnet: { name:'金币磁铁', short:'磁铁', glyph:'U', color:'#f17cb0', duration:10, description:'附近三条轨道的金币会沿光迹飞向你，接触后计入金币。' },
   double: { name:'双倍积分', short:'双倍', glyph:'×2', color:'#ffd35f', duration:12, description:'期间获得的跑酷积分翻倍，挑战固定奖励除外。' },
   sneakers: { name:'超级跳跃', short:'弹跳', glyph:'↑↑', color:'#92ed76', duration:10, description:'跳得更高，可跃过列车；落地前仍需留意障碍。' },
   jetpack: { name:'喷气背包', short:'飞行', glyph:'↑', color:'#6ccfff', duration:7, description:'自动升空避开障碍，左右移动收集空中金币。' },
@@ -15,6 +15,20 @@ export const BONUSES = Object.freeze({
   mystery: { name:'神秘礼盒', short:'礼盒', glyph:'?', color:'#ffad6e', duration:0, description:'随机获得金币、道具或一块护航滑板。' }
 });
 export const STAGES = ['热身起跑','穿梭街区','疾速换线','高能追逐','极限冲刺'];
+// Shared collision/render coordinates. Coin centres touch the runner at this depth.
+export const PICKUP_DEPTH = .32;
+export function pickupPose(e){return {x:e.x,y:e.y+(e.slide>0?.62:1.05),ahead:e.slide>0?.75:0};}
+// Intersect a moving point with an interval, returning the remaining time window.
+function sweepRange(a,b,lo,hi,window=[0,1]){
+  if(Math.abs(b-a)<1e-9)return a>=lo&&a<=hi?window:null;
+  const u=(lo-a)/(b-a),v=(hi-a)/(b-a);
+  const start=Math.max(window[0],Math.min(u,v)),end=Math.min(window[1],Math.max(u,v));
+  return start<=end?[start,end]:null;
+}
+function poseWindows(slide,dt){
+  const split=Math.min(1,Math.max(0,slide/dt));
+  return [...(split>0?[{window:[0,split],sliding:true}]:[]),...(split<1?[{window:[split,1],sliding:false}]:[])];
+}
 export const clamp = (v,lo,hi) => Math.max(lo,Math.min(hi,v));
 export function randomSource(seed=Date.now()) { let s=seed>>>0; return ()=>{s+=0x6D2B79F5;let t=s;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296;}; }
 export class RunnerEngine {
@@ -71,23 +85,27 @@ export class RunnerEngine {
       // Safe corridors move at most one lane between rows, including at the speed cap.
       const choices=[-1,0,1].filter(l=>Math.abs(l-this.nextSafeLane)<=1);
       const safe=row===0?-1:choices[Math.floor(this.random()*choices.length)];
-      const lanes=[-1,0,1].filter(l=>l!==safe);
+      const recipes={casual:['open','open','jump','open','slide','open'],classic:['open','jump','open','slide','jumpMix','open','slideMix','open'],expert:['open','jump','slide','open','jumpMix','slideMix']};
+      const recipe=recipes[this.difficulty][row%recipes[this.difficulty].length];
+      const required=recipe.startsWith('jump')?'jump':recipe.startsWith('slide')?'slide':null;
+      const lanes=[-1,0,1].filter(l=>required||l!==safe);
       const light=this.difficulty==='casual'&&(row<4||this.random()<.58);
-      if(light)lanes.splice(Math.floor(this.random()*2),1);
+      if(light&&!required)lanes.splice(Math.floor(this.random()*2),1);
       for(let n=0;n<lanes.length;n++){
         const lane=lanes[n];let type;
-        if(row===0)type=lane===0?'barrier':'train';
+        if(required)type=recipe.endsWith('Mix')&&lane===lanes.find(l=>l!==safe)?'train':required==='jump'?'barrier':'gate';
+        else if(row===0)type=lane===0?'barrier':'train';
         else if(this.difficulty==='casual'&&row<3)type='barrier';
         else {const patterns=[['train','barrier'],['gate','barrier'],['barrier','barrier'],['train','gate'],['gate','gate'],['train','train']];type=patterns[(row+stage-1)%patterns.length][n];}
-        this.obstacles.push({...this.item(type,lane,ahead,0),halfLength:type==='train'?4.4:.65,row,passed:false,broken:false});
-        if(type==='barrier'&&row%2===0)for(let i=-2;i<=2;i++)this.pickups.push(this.item('coin',lane,ahead+i*2,1.3+(2-Math.abs(i))*.62));
+        this.obstacles.push({...this.item(type,lane,ahead,0),halfLength:type==='train'?4.4:.65,row,required,routeLane:safe,passed:false,broken:false});
+        if(type==='barrier'&&lane!==safe&&row%2===0)for(let i=-2;i<=2;i++)this.pickups.push(this.item('coin',lane,ahead+i*2,1.3+(2-Math.abs(i))*.62));
       }
       const coinCount=row%6===4?13:9;const spacing=row%6===4?1.7:2.5;
-      for(let i=0;i<coinCount;i++)this.pickups.push(this.item('coin',safe,ahead+(i-(coinCount-1)/2)*spacing));
+      for(let i=0;i<coinCount;i++)this.pickups.push(this.item('coin',safe,ahead+(i-(coinCount-1)/2)*spacing,required==='jump'? .95+Math.max(0,1-Math.abs(i-(coinCount-1)/2)/3)*1.8:.95));
       if(row%2===0)this.pickups.push(this.item(this.nextBonus(),safe,ahead-15,1.15));
       this.nextSafeLane=safe;
       const estimatedSpeed=Math.min(this.config.maxSpeed,this.config.startSpeed+world*this.config.acceleration);
-      const gap=Math.max(this.config.minGap,this.config.gap-(stage-1)*2,estimatedSpeed*.5+8.8);
+      const gap=Math.max(this.config.minGap,this.config.gap-(stage-1)*2,estimatedSpeed*1.4+9.4);
       this.nextRow+=gap+this.random()*6;
     }
   }
@@ -116,6 +134,8 @@ export class RunnerEngine {
   }
   step(dt){
     if(this.mode!=='running')return;dt=clamp(dt,0,.05);if(!dt)return;
+    const previous={x:this.x,y:this.y,slide:this.slide,invulnerable:this.invulnerable,board:this.board},magnetWas=this.magnet;
+    const poses=poseWindows(previous.slide,dt);
     this.time+=dt;this.speed=Math.min(this.config.maxSpeed,this.config.startSpeed+this.distance*this.config.acceleration);
     const move=this.speed*dt;this.distance+=move;this.addPoints(move,'distancePoints');
     this.x+=(this.lane*LANE_WIDTH-this.x)*(1-Math.exp(-19*dt));
@@ -139,37 +159,76 @@ export class RunnerEngine {
     }
     // All objects move before collision handling, including on the final frame of a run.
     for(const o of this.obstacles)o.ahead-=move;
-    for(const p of this.pickups)p.ahead-=move;
+    for(const p of this.pickups)if(!p.flight)p.ahead-=move;
     for(const o of this.obstacles){
       if(o.broken)continue;
       const dx=Math.abs(this.x-o.lane*LANE_WIDTH);
-      if(Math.abs(o.ahead)<o.halfLength+.3&&dx<1.05){
-        const playerTop=this.y+(this.slide>0?.72:2.05);
-        const hit=o.type==='train'?this.y<3.13:o.type==='barrier'?this.y<.99:(this.y<3.16&&playerTop>1.22);
-        if(hit&&this.jetpack<=0&&!this.landing&&this.invulnerable<=0){
-          if(this.board>0){this.board=0;this.invulnerable=1.4;o.broken=true;this.savedCrashes++;this.combo=0;this.events.push({type:'shieldBreak'});}
-          else{this.mode='over';this.reason=o.type;this.events.push({type:'crash'});break;}
-        }
+      let contact=sweepRange(o.ahead+move,o.ahead,-o.halfLength-.3,o.halfLength+.3);
+      if(contact)contact=sweepRange(previous.x-o.lane*LANE_WIDTH,this.x-o.lane*LANE_WIDTH,-1.39,1.39,contact);
+      let collision=null;
+      if(contact)for(const pose of poses){
+        const window=[Math.max(contact[0],pose.window[0],previous.invulnerable/dt),Math.min(contact[1],pose.window[1])];
+        if(window[0]>window[1])continue;
+        const hit=sweepRange(previous.y,this.y,o.type==='gate'?1.22-(pose.sliding?.72:2.05):-100,o.type==='train'?3.13:o.type==='barrier'?.99:3.16,window);
+        if(hit){collision=hit;break;}
+      }
+      const newProtection=this.invulnerable>Math.max(0,previous.invulnerable-dt);
+      if(collision&&this.jetpack<=0&&!this.landing&&!newProtection){
+        if(this.board>0||previous.board>collision[0]*dt){this.board=0;this.invulnerable=1.4;o.broken=true;this.savedCrashes++;this.combo=0;this.events.push({type:'shieldBreak'});}
+        else{this.mode='over';this.reason=o.type;this.events.push({type:'crash'});break;}
       }
       if(!o.passed&&o.ahead<-o.halfLength-.4){
         o.passed=true;
         if(dx<.8&&this.jetpack<=0&&!this.landing&&this.invulnerable<=0){this.stats.nearMisses++;this.addPoints(30,'bonusPoints');this.events.push({type:'dodge'});}
       }
     }
+    let magnetActivatedAt=null;
     if(this.mode==='running')for(const p of this.pickups){
-      const dx=Math.abs(this.x-p.lane*LANE_WIDTH);
-      const ordinary=Math.abs(p.ahead)<1&&dx<.82&&p.y>=this.y-.3&&p.y<=this.y+(this.slide>0?1.05:2.1);
-      const magnetic=this.magnet>0&&p.type==='coin'&&Math.abs(p.ahead)<9;
-      if(!p.collected&&(ordinary||magnetic)){
+      if(p.collected)continue;
+      const target=pickupPose(this);
+      let contact=false,contactTime=0;
+      if(p.flight){
+        // Attraction survives magnet expiry, but freezes with the simulation on pause.
+        const f=p.flight;f.age=Math.min(f.duration,f.age+dt);
+        const u=f.age/f.duration,ease=u*u*(3-2*u);
+        p.trail.push({x:p.x,y:p.y,ahead:p.ahead});if(p.trail.length>9)p.trail.shift();
+        p.x=f.x+(target.x-f.x)*ease;p.y=f.y+(target.y-f.y)*ease+Math.sin(u*Math.PI)*.3;
+        p.ahead=f.ahead+(target.ahead-f.ahead)*ease;
+        contact=u>=1;
+      }else{
+        // Swept contact prevents skipped coins at high speed without collecting ahead.
+        for(const pose of poses){
+          const offset=pose.sliding?.75:0;
+          let hit=sweepRange(p.ahead+move-offset,p.ahead-offset,-PICKUP_DEPTH,PICKUP_DEPTH,pose.window);
+          if(hit)hit=sweepRange(previous.x-p.lane*LANE_WIDTH,this.x-p.lane*LANE_WIDTH,-.58,.58,hit);
+          if(hit)hit=sweepRange(p.y-previous.y,p.y-this.y,-.25,pose.sliding?1.05:2.1,hit);
+          if(hit){contact=true;contactTime=hit[0];break;}
+        }
+
+      }
+      if(contact){
         p.collected=true;
         if(p.type==='coin'){
           this.coins++;this.combo++;this.maxCombo=Math.max(this.combo,this.maxCombo);this.comboTimer=this.config.comboWindow;
-          this.addPoints(10,'coinPoints');this.events.push({type:'coin',lane:p.lane,y:p.y,ahead:p.ahead});
+          this.addPoints(10,'coinPoints');this.events.push({type:'coin',lane:p.lane,x:this.x,y:p.flight?target.y:p.y,ahead:target.ahead,magnetic:!!p.flight});
           if(this.combo===20||this.combo===40)this.events.push({type:'combo',combo:this.combo});
-        }else this.collectBonus(p.type);
+        }else{const before=this.magnet;this.collectBonus(p.type);if(this.magnet>before)magnetActivatedAt=magnetActivatedAt===null?contactTime:Math.min(magnetActivatedAt,contactTime);}
       }
     }
-    this.obstacles=this.obstacles.filter(o=>o.ahead>-16);this.pickups=this.pickups.filter(p=>p.ahead>-8&&!p.collected);
+    // Resolve attraction after all pickups, independent of array order. Only coins
+    // inside the field while it was active can enter a flight, including activation.
+    const magnetWindows=[];
+    if(magnetWas>0)magnetWindows.push([0,Math.min(1,magnetWas/dt)]);
+    if(magnetActivatedAt!==null)magnetWindows.push([magnetActivatedAt,1]);
+    if(this.mode==='running'&&magnetWindows.length)for(const p of this.pickups){
+      if(p.collected||p.flight||p.type!=='coin')continue;
+      const target=pickupPose(this);
+      if(Math.abs(p.y-target.y)>=3.2||!magnetWindows.some(window=>sweepRange(p.ahead+move,p.ahead,-.5,9,window)))continue;
+      p.x=p.lane*LANE_WIDTH;
+      p.flight={x:p.x,y:p.y,ahead:p.ahead,age:0,duration:clamp(Math.hypot(p.x-target.x,p.y-target.y,p.ahead-target.ahead)/30,.18,.36)};
+      p.trail=[];
+    }
+    this.obstacles=this.obstacles.filter(o=>o.ahead>-16);this.pickups=this.pickups.filter(p=>(p.flight||p.ahead>-8)&&!p.collected);
     const stage=Math.min(5,1+Math.floor(this.distance/this.config.stageLength));
     if(stage>this.stage){this.stage=stage;this.events.push({type:'stage',stage});}
     this.stageProgress=this.stage===5?1:(this.distance%this.config.stageLength)/this.config.stageLength;
