@@ -10,15 +10,32 @@ export const ROUTE_EVENTS=Object.freeze({
   courier:{name:'限段快递',short:'收集',hint:'沿蓝色路线收集徽章，留意每次换道',color:'#78d7ff',glyph:'◆',reward:500,coins:25},
   rhythm:{name:'跳滑接力',short:'连招',hint:'按提示连续跳跃和滑铲，干净通过才计数',color:'#ffc76e',glyph:'↟',reward:750,coins:30},
   convoy:{name:'晚点车潮',short:'避车',hint:'迎面列车交错进站，沿亮起的轨道穿行',color:'#ff977f',glyph:'!',reward:800,coins:35},
-  rooftop:{name:'车顶夺宝',short:'冒险',hint:'沿坡上车拿徽章；地面可绕行，错过不扣分',color:'#d2a5ff',glyph:'↗',reward:900,coins:40}
+  rooftop:{name:'分岔夺宝',short:'冒险',hint:'蓝色地面稳拿奖励；金色车顶每枚额外 +200 分、10 金币',color:'#d2a5ff',glyph:'↗',reward:400,coins:20},
+  works:{name:'施工封线',short:'施工',hint:'黄黑围挡不可穿越，选开放轨道连续跳跃、滑铲',color:'#ffd36d',glyph:'↔',reward:950,coins:40}
 });
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 function rng(seed){let s=seed>>>0;return()=>{s+=0x6D2B79F5;let t=s;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296;};}
 function shuffle(items,random){const a=[...items];for(let i=a.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
-export function travelTime(from,to,config){
-  if(to<=from)return 0;const cap=(config.maxSpeed-config.startSpeed)/config.acceleration,until=Math.min(to,cap);let time=0;
-  if(from<cap)time=Math.log((config.startSpeed+until*config.acceleration)/(config.startSpeed+from*config.acceleration))/config.acceleration;
-  return time+Math.max(0,to-Math.max(from,cap))/config.maxSpeed;
+const smooth=t=>t*t*(3-2*t);
+export function speedProfile(world,config,seed=0){
+  world=Math.max(0,world);
+  const base=Math.min(config.maxSpeed,config.startSpeed+world*config.acceleration);
+  if(world<420)return {speed:base,phase:'warmup',name:'热身渐速',next:'巡航',remaining:420-world,progress:world/420,cycle:0};
+  const span=980+((seed>>>0)%4)*80,cycle=Math.floor((world-420)/span),p=((world-420)%span)/span;
+  const peak=1.18+((Math.imul(cycle+1,31)^(seed>>>0))>>>0)%7*.01;
+  const phases=[['cruise','巡航','提速',0,.14,1,1],['rise','提速','疾跑',.14,.38,1,peak],['rush','疾跑','回落',.38,.53,peak,peak],['ease','回落','恢复',.53,.72,peak,.86],['recover','恢复','蓄势',.72,.88,.86,.86],['ready','蓄势','巡航',.88,1,.86,1]];
+  const [phase,name,next,from,to,a,b]=phases.find(v=>p<v[4])||phases.at(-1),u=(p-from)/(to-from);
+  const capDistance=(config.maxSpeed-config.startSpeed)/config.acceleration;
+  const mastery=1+.14*(1-Math.exp(-Math.max(0,world-capDistance)/6000));
+  return {speed:base*mastery*(a+(b-a)*smooth(u)),phase,name,next,remaining:(to-p)*span,progress:u,cycle:cycle+1};
+}
+export function travelTime(from,to,config,seed=0){
+  if(to<=from)return 0;
+  // Simpson integration shares the exact speed profile used by the simulation.
+  const n=Math.max(2,Math.ceil((to-from)/8/2)*2),h=(to-from)/n;
+  let sum=1/speedProfile(from,config,seed).speed+1/speedProfile(to,config,seed).speed;
+  for(let i=1;i<n;i++)sum+=(i%2?4:2)/speedProfile(from+i*h,config,seed).speed;
+  return sum*h/3;
 }
 export class RouteDirector {
   constructor(seed,difficulty){

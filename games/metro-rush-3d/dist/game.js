@@ -23,7 +23,7 @@ function unlockAudio(){if(!soundOn)return;try{audioContext??=new(window.AudioCon
 function tone(type){
   if(!soundOn||!audioContext||audioContext.state!=='running')return;const now=audioContext.currentTime;
   if(type==='coin'&&now-lastCoinTone<.055)return;if(type==='coin')lastCoinTone=now;
-  const notes={eventWarning:[460,700,.24,.025],eventStart:[520,980,.32,.03],eventProgress:[860,1420,.12,.025],stamp:[920,1450,.12,.025],eventFinish:[660,1320,.38,.04],district:[260,520,.35,.02],coin:[900+(engine.combo%8)*70,1550,.09,.025],jump:[260,590,.13,.025],slide:[340,130,.15,.025],move:[230,270,.045,.01],crash:[110,34,.4,.07],magnet:[440,1350,.38,.035],double:[660,1760,.3,.032],sneakers:[360,1080,.2,.03],jetpack:[180,800,.6,.03],board:[300,900,.23,.032],boardPickup:[660,980,.15,.03],mystery:[750,1600,.3,.033],mission:[660,1320,.4,.04],combo:[880,1760,.25,.035],stage:[440,880,.3,.03],shieldBreak:[180,80,.3,.04],land:[85,50,.08,.015],trainWarning:[140,95,.5,.035],ceiling:[140,80,.12,.02]};
+  const notes={pace:[320,760,.25,.018],eventWarning:[460,700,.24,.025],eventStart:[520,980,.32,.03],eventProgress:[860,1420,.12,.025],stamp:[920,1450,.12,.025],eventFinish:[660,1320,.38,.04],district:[260,520,.35,.02],coin:[900+(engine.combo%8)*70,1550,.09,.025],jump:[260,590,.13,.025],slide:[340,130,.15,.025],move:[230,270,.045,.01],crash:[110,34,.4,.07],magnet:[440,1350,.38,.035],double:[660,1760,.3,.032],sneakers:[360,1080,.2,.03],jetpack:[180,800,.6,.03],board:[300,900,.23,.032],boardPickup:[660,980,.15,.03],mystery:[750,1600,.3,.033],mission:[660,1320,.4,.04],combo:[880,1760,.25,.035],stage:[440,880,.3,.03],shieldBreak:[180,80,.3,.04],land:[85,50,.08,.015],trainWarning:[140,95,.5,.035],ceiling:[140,80,.12,.02]};
   const n=notes[type];if(!n)return;const osc=audioContext.createOscillator(),gain=audioContext.createGain();
   osc.type=type==='crash'?'sawtooth':'sine';osc.frequency.setValueAtTime(n[0],now);osc.frequency.exponentialRampToValueAtTime(n[1],now+n[2]);
   gain.gain.setValueAtTime(n[3],now);gain.gain.exponentialRampToValueAtTime(.001,now+n[2]);osc.connect(gain);gain.connect(audioContext.destination);osc.start();osc.stop(now+n[2]);osc.onended=()=>{osc.disconnect();gain.disconnect();};
@@ -53,7 +53,7 @@ function announceBonus(type,duration){
 function updateMenu(){
   const d=DIFFICULTIES[difficulty];$('app').dataset.difficulty=difficulty;
   $('difficulty-hint').textContent=d.hint;$('difficulty-speed').textContent=`${Math.round(d.startSpeed*3.6)} km/h 起步`;
-  $('difficulty-pattern').textContent={casual:'宽松路线与收集奖励，随机事件循序加入。',classic:'跳滑、车潮和车顶夺宝，挑战之后有喘息。',expert:'更长的随机连招与混合列车，准确选择路线。'}[difficulty];
+  $('difficulty-pattern').textContent={casual:'温和变速，地面稳拿宝藏，车顶挑战高奖励。',classic:'持续变速、施工封线、分岔夺宝，三连胜送补给。',expert:'更高速度峰值与连续混合障碍，提速后留有恢复段。'}[difficulty];
   $('difficulty-reward').textContent=`${multiplierText(d.multiplier)} 积分`;$('difficulty-boards').textContent=`${d.boards} 块滑板`;$('start-label').textContent=`开始 · ${d.name}模式`;
   $('best').textContent=format(records[difficulty].score);$('best-distance').textContent=format(records[difficulty].distance);
   $('mode-badge').textContent=`${d.name} · ${d.english}`;
@@ -82,7 +82,8 @@ function syncUI(){
   $('overlay').hidden=engine.mode!=='paused'&&engine.mode!=='over';
   $('score').textContent=format(engine.score);$('distance').textContent=format(engine.distance);$('coins').textContent=format(engine.coins);$('hud-best').textContent=format(records[difficulty].score);
   $('multiplier').textContent=multiplierText(engine.multiplier);$('speed').textContent=Math.round(engine.speed*3.6)+' km/h';
-  $('zone').textContent=`${DISTRICTS[engine.scene].name} · LV.${engine.stage}`;$('next-stage').textContent=engine.stage<5?`下一等级 ${format(engine.config.stageLength-(engine.distance%engine.config.stageLength))} m`:'最高等级';$('stage-fill').style.transform=`scaleX(${engine.stageProgress})`;
+  const pace=engine.paceView;$('hud').dataset.pace=pace.phase;
+  $('zone').textContent=`${DISTRICTS[engine.scene].name} · LV.${engine.stage}`;$('next-stage').textContent=`${pace.name} · ${Math.ceil(pace.remaining)} m 后${pace.next}`;$('stage-fill').style.transform=`scaleX(${pace.progress})`;
   $('combo-panel').hidden=menu||engine.combo<3;$('combo-count').textContent=engine.combo;$('combo-label').textContent=engine.combo>=20?`连币倍率 ${multiplierText(engine.comboMultiplier)}`:`${20-engine.combo} 枚后 ×1.5`;$('combo-fill').style.transform=`scaleX(${engine.comboTimer/engine.config.comboWindow})`;
   let active=0;for(const [key,b] of Object.entries(BONUSES)){
     if(key==='mystery')continue;const seconds=engine[key];const el=$(`power-${key}`);el.hidden=seconds<=0;
@@ -97,7 +98,7 @@ function syncUI(){
   if(upcoming){
     const labels={jump:['↑','前方跳跃','↑ / 上滑'],slide:['↓','前方滑铲','↓ / 下滑'],climb:['↗','斜坡上车顶','沿箭头跑上斜坡'],descend:['↘','斜坡下车','继续前进回到地面'],oncoming:['!','列车驶来',`${['左','中','右'][upcoming.lane+1]}轨来车 · 提前换道`]};
     const [symbol,label,hint]=labels[upcoming.kind];$('action-symbol').textContent=symbol;$('action-label').textContent=label;
-    $('action-distance').textContent=`${Math.ceil(upcoming.meters)} 米 · ${upcoming.mixed?'先避开列车':hint}`;$('action-cue').dataset.action=upcoming.kind;
+    $('action-distance').textContent=`${Math.ceil(upcoming.meters)} 米 · ${upcoming.works?'先避开黄黑封线':upcoming.mixed?'先避开列车':hint}`;$('action-cue').dataset.action=upcoming.kind;
   }
   $('board-count').textContent=engine.boardCharges;$('board-action').disabled=engine.board>0||engine.boardCharges===0||engine.jetpack>0||engine.landing;
   $('board-hint').textContent=engine.board>0?`保护中 · ${Math.ceil(engine.board)}s`:engine.jetpack>0?'飞行中':engine.boardCharges===0?'拾取滑板补充':'B / 双击使用';
@@ -111,11 +112,11 @@ function syncUI(){
     $('mission-tag').textContent=phase==='warning'?'前方事件':phase==='result'?(encounter.success?'事件完成':'下次再试'):`随机事件 · ${encounter.type==='rooftop'?'自选冒险':['','轻快','紧张','高压'][encounter.level]}`;
     $('mission-name').textContent=meta.name;
     $('mission-reward').textContent=`+${encounter.reward} 分`;
-    $('mission-detail').textContent=phase==='result'?(encounter.success?`奖励 ${encounter.coins} 金币 · 已完成 ${engine.eventStats.completed} 个事件`:'错过不会扣分，继续探索下一段。'):meta.hint;
+    $('mission-detail').textContent=phase==='result'?(encounter.success?`+${encounter.coins} 金币${encounter.streakReward?' · 三连胜补给已到手':` · 连续完成 ${engine.eventStats.streak} 次`}`:'错过不会扣分，继续探索下一段。'):encounter.type==='rooftop'?`中轨蓝色稳拿；${encounter.roofLane===-1?'左':'右'}轨上坡拿金色，每枚额外 +200 分、10 金币。`:meta.hint;
     $('mission-progress').textContent=phase==='warning'?`${Math.ceil(encounter.remaining)} 米后开始 · 目标 ${encounter.goal} ${['courier','rooftop'].includes(encounter.type)?'枚徽章':'关'}`:`${encounter.progress} / ${encounter.goal}${phase==='active'?` · 剩余 ${Math.ceil(encounter.remaining)} m`:''}`;
     $('mission-fill').style.transform=`scaleX(${phase==='warning'?0:encounter.progress/encounter.goal})`;
   }else{
-    $('mission-tag').textContent=mission?'本局挑战':'继续探索';
+    $('mission-panel').dataset.phase='mission';$('mission-tag').textContent=`第 ${engine.missionRound} 组挑战 · ${engine.eventStats.streak%3}/3 连胜补给`;
     $('mission-name').textContent=mission?.name||`已完成 ${engine.eventStats.completed} 个随机事件`;$('mission-reward').textContent=mission?`+${mission.reward} 分`:'新事件在路上';
     $('mission-progress').textContent=mission?`${mission.progress} / ${mission.target}`:`最佳连续完成 ${engine.eventStats.bestStreak} 次`;$('mission-fill').style.transform=`scaleX(${mission?mission.progress/mission.target:1})`;
   }
@@ -138,18 +139,18 @@ function showGameOver(){
   $('overlay-message').textContent={train:'从斜坡登上车顶，或提前换道。车厢间隙需要起跳越过。',oncoming:'迎面列车速度更快，看到车灯和来车提示就提前换道。',ramp:'从坡脚沿箭头进入斜坡；无法从侧面穿过坡体。',barrier:'向上跳跃，或换到空闲轨道，就能越过路障。',gate:'向下滑铲通过横杆。超级跳跃时也要留意高度。'}[engine.reason]||'这一程结束了，下一程继续。';
   $('result-stats').hidden=false;$('result-score').textContent=format(engine.score);$('result-mode').textContent=`${engine.config.name} · 基础倍率 ${multiplierText(engine.config.multiplier)}`;
   $('result-distance').textContent=format(engine.distance)+' m';$('result-coins').textContent=format(engine.coins);$('result-combo').textContent=format(engine.maxCombo);$('result-bonuses').textContent=engine.bonusCount;
-  const complete=engine.missions.filter(m=>m.done).length;$('result-reward').textContent=`完成挑战 ${complete}/3 · 滑板护身 ${engine.savedCrashes} 次 · 随机事件 ${engine.eventStats.completed} 次 · 最佳连胜 ${engine.eventStats.bestStreak} 次 · 奖励分 +${format(engine.stats.bonusPoints)}`;
+  $('result-reward').textContent=`最高时速 ${Math.round(engine.peakSpeed*3.6)} km/h · 完成挑战 ${engine.missionsCompleted} 项 · 滑板护身 ${engine.savedCrashes} 次 · 随机事件 ${engine.eventStats.completed} 次 · 最佳连胜 ${engine.eventStats.bestStreak} 次 · 奖励分 +${format(engine.stats.bonusPoints)}`;
   $('resume').textContent='再跑一次 ↗';renderer.shake=1;syncUI();$('resume').focus({preventScroll:true});
 }
 function goHome(){engine.reset(undefined,difficulty);renderer.resetCharacter();accumulator=0;renderer.particles=[];clearTimeout(toastTimer);clearTimeout(noticeTimer);$('bonus-notice').classList.remove('visible');$('toast').classList.remove('visible');updateMenu();syncUI();$('start').focus({preventScroll:true});}
 function events(){
   for(const e of engine.drainEvents()){
     renderer.handleEvent(e);if(e.type!=='stamp'&&(e.type!=='eventFinish'||e.success))tone(e.type);if(e.type==='coin')renderer.burst(e);
-    if(e.type==='stamp')renderer.burst({...e,color:'#a4e8ff'});
+    if(e.type==='stamp')renderer.burst({...e,color:e.color||'#a4e8ff'});
     if(e.type==='district')toast(`进入${DISTRICTS[e.scene].name}`,2200);
     if(e.type==='eventWarning')toast(`前方 · ${ROUTE_EVENTS[e.eventType].name}`,1900);
     if(e.type==='eventStart')toast(`${ROUTE_EVENTS[e.eventType].name}开始`,1500);
-    if(e.type==='eventFinish'&&e.success)toast(`完成！+${e.reward} 分 · +${e.coins} 金币`,2700);
+    if(e.type==='eventFinish'&&e.success)toast(`${e.streakReward?'三连胜！补给已送达':'完成！'} +${e.reward} 分 · +${e.coins} 金币`,2700);
     if(['magnet','double','sneakers','jetpack','board'].includes(e.type))announceBonus(e.type,e.duration);
     if(e.type==='boardPickup')toast('获得护航滑板 · 按 B / 双击启用');
     if(e.type==='shieldBreak'){renderer.shake=.6;toast('滑板已护身 · 继续冲刺！');}
@@ -157,7 +158,8 @@ function events(){
     if(e.type==='landing')toast('安全降落 · 准备接回轨道');
     if(e.type==='mystery'||e.type==='mission')toast(e.message,2800);
     if(e.type==='combo')toast(`${e.combo} 连币！积分倍率 ${multiplierText(engine.multiplier)}`);
-    if(e.type==='stage')toast(`LEVEL ${e.stage} · ${STAGES[e.stage-1]}`,2600);
+    if(e.type==='pace'&&['rise','rush','recover'].includes(e.phase))toast({rise:'开始提速 · 留意前方路线',rush:'疾跑时段 · 保持节奏',recover:'恢复时段 · 收集补给'}[e.phase],2100);
+    if(e.type==='stage')toast(`LEVEL ${e.stage} · ${STAGES[Math.min(4,e.stage-1)]}`,2600);
     if(e.type==='crash')showGameOver();
   }
 }

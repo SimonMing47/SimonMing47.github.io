@@ -1,4 +1,4 @@
-import { DISTRICTS } from './director.js';
+import { DISTRICTS, ROUTE_EVENTS } from './director.js';
 
 const hash=(n,s=0)=>{const v=Math.sin(n*127.1+s*311.7)*43758.5453;return v-Math.floor(v);};
 // Landmarks are tied to world chunks, not a short scrolling scenery loop.
@@ -71,16 +71,25 @@ export function encounterScenery(r,e,distance,time){
   const view=e.encounterView;
   for(const ev of e.encounters){
     const z=2.5-ev.start+distance;if(z>20||z< -190)continue;
-    const colors={courier:'#78d7ff',rhythm:'#ffc76e',convoy:'#ff977f',rooftop:'#d2a5ff'},c=colors[ev.type];
+    const c=ROUTE_EVENTS[ev.type].color;
     for(const side of [-1,1]){r.box(side*4.8,4.4,z,.20,8.8,.32,'#324b60');r.box(side*4.8,2.6,z+.19,.09,3.4,.03,c,0,0,0,.8);}
     r.box(0,8.95,z,9.9,.35,.45,'#253e55');
     for(let i=0;i<ev.goal;i++)r.sphere((i-(ev.goal-1)/2)*.5,8.96,z+.25,.20,.20,.07,c,.9);
+    if(ev.type==='rooftop')for(const roof of [false,true]){
+      const x=(roof?ev.roofLane:ev.groundLane)*2.7,tone=roof?'#ffd56e':'#78d7ff';
+      for(let arrow=0;arrow<4;arrow++)for(const side of [-1,1])r.box(x+side*.15,.08,z+4+arrow*2,.085,.025,.6,tone,0,side*.6,0,.9);
+      r.box(x,5.3,z,.8,.8,.12,'#243c50');r.box(x,5.3,z+.07,.32,.32,.05,tone,0,0,Math.PI/4,.9);
+    }
   }
   if(!view||view.phase!=='active')return;
-  const ev=e.encounters.find(x=>x.id===view.id),c={courier:'#78d7ff',rhythm:'#ffc76e',convoy:'#ff977f',rooftop:'#d2a5ff'}[view.type];
+  const ev=e.encounters.find(x=>x.id===view.id),c=ROUTE_EVENTS[view.type].color;
   if(view.type==='convoy'){
     const wave=e.obstacles.filter(o=>o.eventId===view.id&&o.ahead+o.halfLength>0).sort((a,b)=>a.rowWorld-b.rowWorld)[0];
     if(wave)for(const lane of [-1,0,1]){const safe=lane===wave.routeLane;r.box(lane*2.7,3.9,-13,.55,.55,.12,safe?'#8ae8c4':'#ed9b79',0,0,0,1);}
+  }
+  if(view.type==='works')for(const o of e.obstacles.filter(o=>o.eventId===view.id&&o.construction&&o.ahead>0&&o.ahead<150))for(const side of [-1,1])for(let i=0;i<3;i++){
+    const x=o.lane*2.7+side*.96,z=2.5-o.ahead+o.halfLength+2+i*2;
+    r.box(x,.08,z,.36,.16,.4,'#394a51');r.cylinder(x,.32,z,.23,.23,.48,'#efab58',Math.PI/2);r.box(x,.36,z,.24,.09,.24,'#fff0c5');
   }
   // Low edge lights guide the eye without covering an obstacle or changing controls.
   const end=Math.min(150,ev.end-distance);

@@ -143,6 +143,16 @@ export class WorldRenderer {
     if(o.type==='gap')return;
     if(o.type==='ramp')return this.ramp(o);
     if(o.type==='train'){
+      if(o.construction){
+        const front=z+o.halfLength;
+        this.box(x,1.65,z,2.18,3.3,o.halfLength*2,'#bd9653');
+        this.box(x,1.65,front+.015,2.18,3.3,.035,'#edbb57');
+        for(let i=-2;i<=2;i++)this.box(x+i*.43,1.65,front+.04,.19,2.7,.025,'#354652',0,0,-.16);
+        this.box(x,2,front+.065,1,.8,.03,'#273e4c');
+        for(const side of [-1,1])this.box(x,2,front+.09,.11,.64,.02,'#fff1bc',0,0,side*.78,1);
+        for(const side of [-1,1])this.sphere(x+side*.84,3.4,front,.18,.18,.18,'#ffe297',.8);
+        return;
+      }
       const count=Math.max(1,Math.ceil(o.halfLength*2/8.8)),length=o.halfLength*2/count;
       for(let i=0;i<count;i++)this.train(x,z+o.halfLength-length*(i+.5),o.approachSpeed?'#d67651':o.roofRoute?'#378e9d':o.row%3===1?'#dd9868':'#728cac',length,o.roofRoute);
       if(o.approachSpeed){
@@ -339,8 +349,8 @@ export class WorldRenderer {
         const x=p.x??p.lane*LANE_WIDTH,z=2.5-p.ahead,y=p.y;
         if(p.type==='stamp'){
           const parent=transform(x,y,z,1,1,1,0,t*1.6);
-          this.cylinder(0,0,0,.68,.68,.16,'#70d7ff',0,0,0,.65,parent);this.box(0,0,.095,.27,.27,.055,'#edfaff',0,0,Math.PI/4,.9,parent);
-          this.cylinder(0,0,-.09,.43,.43,.025,'#b8efff',0,0,0,.8,parent);
+          this.cylinder(0,0,0,.68,.68,.16,p.color||'#70d7ff',0,0,0,.65,parent);this.box(0,0,.095,.27,.27,.055,'#fff9e5',0,0,Math.PI/4,.9,parent);
+          this.cylinder(0,0,-.09,.43,.43,.025,p.roof?'#fff0b3':'#b8efff',0,0,0,.8,parent);
         }else if(p.type==='coin'){
           if(p.flight)for(let i=0;i<p.trail.length;i++){const point=p.trail[i],size=.04+i*.01;this.sphere(point.x,point.y,2.5-point.ahead,size,size,size,i%2?'#ffc2e2':'#ffe6a0',1);}
           const parent=transform(x,y,z,1,1,1,0,t*2.6+p.id*.3);
@@ -362,7 +372,8 @@ export class WorldRenderer {
     const desiredHeight=menu?0:Math.max(e.floorHeight,e.y*(flight?.9:.65));this.camHeight+=(desiredHeight-this.camHeight)*(1-Math.exp(-5*dt));
     const eye=[this.camX+shake,menu?(mobile?3.4:4.3):Math.min(e.environment==='tunnel'?8.3:20,5.2+this.camHeight*.9),menu?(mobile?8.2:10):11.6];
     const at=[menu?(mobile?1.2:1.1):this.camX*.7,menu?(mobile?-.7:.8):1.1+this.camHeight*.8,-21];
-    const vp=multiply(perspective((mobile?66:57)*Math.PI/180,this.canvas.width/this.canvas.height,.1,300),lookAt(eye,at));
+    const speedFov=menu||this.reduceMotion?0:Math.max(0,Math.min(7,(e.speed-e.config.startSpeed)*.20));
+    const vp=multiply(perspective(((mobile?66:57)+speedFov)*Math.PI/180,this.canvas.width/this.canvas.height,.1,300),lookAt(eye,at));
     const gl=this.gl;const tunnel=menu?{start:60+distance,end:150+distance}:e.tunnels.find(s=>s.end>distance-15&&s.start<distance+210);
     gl.useProgram(this.program);gl.uniform2fv(this.tunnelBoundsUniform,tunnel?[2.5-tunnel.end+distance,2.5-tunnel.start+distance]:[-10000,-9999]);gl.uniform1f(this.tunnelBlendUniform,menu?0:e.tunnelBlend);
     const blend=e.director.sceneBlend(menu?0:distance),from=DISTRICTS[blend.previous.type].sky,to=DISTRICTS[blend.current.type].sky,sky=from.map((v,i)=>v+(to[i]-v)*blend.mix);
