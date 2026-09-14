@@ -23,3 +23,5 @@
 #mission-detail{margin:7px 0 12px;font-size:14px;line-height:1.55;color:#c1d9e4}
 .mission-panel[data-phase=warning]{border-style:dashed}.mission-panel[data-phase=result]{background:linear-gradient(135deg,#24484ff5,#152d43ed)}
 @media(max-width:700px){.mission-panel.event-active{width:min(55vw,265px);padding:11px 12px}.mission-panel.event-active strong{font-size:15px}.mission-panel.event-active #mission-progress{font-size:13px}#mission-detail{font-size:13px;line-height:1.5;margin-bottom:9px}.mission-panel.event-active b{display:none}}
+
+.hud[data-pace=rise] #speed,.hud[data-pace=rush] #speed{color:#ffe39c;font-weight:700}.hud[data-pace=recover] #speed{color:#a1eed7}.hud[data-pace=rise] .stage-track>span,.hud[data-pace=rush] .stage-track>span{background:#ffd36d}.hud[data-pace=recover] .stage-track>span{background:#8be3cb}.stage-block>div>span:last-child{white-space:nowrap}.mission-panel[data-phase=mission] .mission-tag{line-height:1.5}.mission-panel[data-phase=mission]>div{align-items:flex-start}

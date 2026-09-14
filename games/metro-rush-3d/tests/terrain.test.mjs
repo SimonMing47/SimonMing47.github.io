@@ -31,7 +31,7 @@ test('rooftop coins require rooftop contact and queued sliding starts on landing
   const e=empty();train(e,0,70);e.y=3.3;e.floorHeight=3.3;e.surface='roof';e.pickups=[e.item('coin',0,.4,4.25),e.item('coin',0,.4,.95)];tick(e,.05);assert.equal(e.coins,1);e.action('jump');tick(e,.16);e.action('slide');tick(e,.4);assert.equal(e.surface,'roof');assert.ok(e.slide>0);assert.equal(e.slideQueued,false);
 });
 test('oncoming trains use combined closing speed, freeze on pause and collide at maximum speed',()=>{
-  const e=empty('expert');e.distance=1e5;const o=train(e,60,26.4,1,18);e.step(.05);assert.ok(Math.abs(o.ahead-57)<1e-6);e.pause();const snapshot=o.ahead;tick(e,1);assert.equal(o.ahead,snapshot);e.resume();e.x=2.7;e.lane=1;tick(e,1);assert.equal(e.mode,'over');assert.equal(e.reason,'oncoming');
+  const e=empty('expert');e.distance=1e5;const o=train(e,60,26.4,1,18);const before=e.distance;e.step(.05);assert.ok(Math.abs(o.ahead-(60-(e.distance-before)-18*.05))<1e-6);e.pause();const snapshot=o.ahead;tick(e,1);assert.equal(o.ahead,snapshot);e.resume();e.x=2.7;e.lane=1;tick(e,1);assert.equal(e.mode,'over');assert.equal(e.reason,'oncoming');
   const fast=empty('expert');fast.distance=1e5;train(fast,2,1,0,30);fast.step(.05);assert.equal(fast.mode,'over');
 });
 test('long train bodies persist until their tail passes and remain collidable',()=>{
