@@ -1,3 +1,5 @@
+import { RouteDirector, DISTRICTS, ROUTE_EVENTS, travelTime } from './director.js';
+export { DISTRICTS, ROUTE_EVENTS } from './director.js';
 /** Deterministic gameplay. x is lateral; ahead is metres in front of the runner. */
 export const LANE_WIDTH = 2.7;
 export const TRACK = Object.freeze({ roofHeight:3.3, roofHalfWidth:1.08, tunnelCeiling:8.8, tunnelArchBase:3.2, tunnelArchRadius:5.88, tunnelSafeRadius:5.4 });
@@ -45,7 +47,7 @@ export class RunnerEngine {
   constructor(seed,difficulty='classic') { this.reset(seed,difficulty); }
   reset(seed=Date.now(),difficulty=this.difficulty||'classic') {
     if(!Object.hasOwn(DIFFICULTIES,difficulty)) throw new Error('Unknown difficulty');
-    this.difficulty=difficulty;this.config=DIFFICULTIES[difficulty];this.random=randomSource(seed);this.seed=seed;this.mode='menu';
+    this.difficulty=difficulty;this.config=DIFFICULTIES[difficulty];this.random=randomSource(seed);this.seed=seed;this.rewardRandom=randomSource(seed^0x761ed);this.bonusRandom=randomSource(seed^0x923da);this.director=new RouteDirector(seed,difficulty);this.mode='menu';
     this.distance=0;this.time=0;this.speed=this.config.startSpeed;this.stage=1;this.stageProgress=0;
     this.lane=0;this.x=0;this.y=0;this.vy=0;this.slide=0;this.slideQueued=false;this.grounded=true;this.floorHeight=0;this.supportId=null;this.surface='ground';this.coins=0;this.score=0;this.points=0;
     this.magnet=0;this.double=0;this.sneakers=0;this.jetpack=0;this.board=0;this.invulnerable=0;this.landing=false;
@@ -53,6 +55,7 @@ export class RunnerEngine {
     this.combo=0;this.maxCombo=0;this.comboTimer=0;this.bonusCount=0;this.bonusCoins=0;
     this.stats={ coinPoints:0,distancePoints:0,bonusPoints:0,nearMisses:0 };
     this.obstacles=[];this.pickups=[];this.tunnels=[];this.courses=[];this.environment='city';this.tunnelBlend=0;this.events=[];this.rows=0;this.id=0;this.reason='';this.nextSafeLane=0;
+    this.encounters=[];this.lastEncounter=null;this.eventStats={completed:0,attempted:0,streak:0,bestStreak:0};this.scene='station';this.director.ensureDistricts(0);
     this.nextRow=this.config.firstRow;this.lastMilestone=0;this.nextAirCoin=0;this.bonusBag=[];
     this.missions=[{id:'coins',name:'收集 50 枚金币',target:50,progress:0,reward:500,done:false},{id:'distance',name:'跑过 800 米',target:800,progress:0,reward:800,done:false},{id:'bonus',name:'拾取 3 个道具',target:3,progress:0,reward:600,done:false}];
     for(let p=10;p<this.config.firstRow-17;p+=3)this.pickups.push(this.item('coin',0,p));
@@ -76,8 +79,10 @@ export class RunnerEngine {
       this.events.push({type:'board',duration:this.board});return true;
     }
     if(action==='jump'&&this.grounded&&Math.abs(this.y-this.floorHeight)<.05&&this.vy<=0&&this.jetpack<=0&&!this.landing){
-      this.slide=0;this.slideQueued=false;this.grounded=false;this.vy=this.sneakers>0?PHYSICS.superJumpVelocity:PHYSICS.jumpVelocity;
-      this.events.push({type:'jump'});return true;
+      this.slide=0;this.slideQueued=false;this.grounded=false;const velocity=this.sneakers>0?PHYSICS.superJumpVelocity:PHYSICS.jumpVelocity;this.vy=velocity;
+      const tunnel=this.tunnels.find(t=>this.distance>=t.start&&this.distance<=t.end);
+      if(tunnel){const room=Math.max(.1,Math.min(tunnel.ceiling,tunnelClearance(this.x))-2.05-this.y-.06);this.vy=Math.min(this.vy,Math.sqrt(2*PHYSICS.gravity*room));}
+      this.events.push({type:'jump',ceilingLimited:this.vy<velocity});return true;
     }
     if(action==='slide'&&this.jetpack<=0&&!this.landing){
       if(!this.grounded||Math.abs(this.y-this.floorHeight)>.05){this.slideQueued=true;this.vy=Math.min(this.vy,-16);this.events.push({type:'drop'});}
@@ -85,51 +90,100 @@ export class RunnerEngine {
     }return false;
   }
   nextBonus(){
-    if(!this.bonusBag.length){this.bonusBag=Object.keys(BONUSES);for(let i=this.bonusBag.length-1;i>0;i--){const j=Math.floor(this.random()*(i+1));[this.bonusBag[i],this.bonusBag[j]]=[this.bonusBag[j],this.bonusBag[i]];}}
+    if(!this.bonusBag.length){this.bonusBag=Object.keys(BONUSES);for(let i=this.bonusBag.length-1;i>0;i--){const j=Math.floor(this.bonusRandom()*(i+1));[this.bonusBag[i],this.bonusBag[j]]=[this.bonusBag[j],this.bonusBag[i]];}}
     return this.bonusBag.pop();
   }
+  speedAt(world){return Math.min(this.config.maxSpeed,this.config.startSpeed+world*this.config.acceleration);}
+  rowGap(world){return Math.max(this.config.minGap,this.config.gap-(Math.min(5,1+Math.floor(world/this.config.stageLength))-1)*2,this.speedAt(world)*1.4+9.4);}
+  chooseLane(from=this.nextSafeLane){return this.director.choose([-1,0,1].filter(l=>Math.abs(l-from)<=1));}
+  incomingAhead(world,approachSpeed,halfLength){return halfLength+world-this.distance+approachSpeed*travelTime(this.distance,world,this.config);}
   populate(){
+    this.director.ensureDistricts(this.distance);
     while(this.nextRow-this.distance<180){
-      const row=this.rows++,world=this.nextRow,ahead=world-this.distance;
-      const stage=Math.min(5,1+Math.floor(world/this.config.stageLength));
-      // Safe corridors move at most one lane between rows, including at the speed cap.
-      const choices=[-1,0,1].filter(l=>Math.abs(l-this.nextSafeLane)<=1);
-      const safe=row===0?-1:choices[Math.floor(this.random()*choices.length)];
-      const estimatedSpeed=Math.min(this.config.maxSpeed,this.config.startSpeed+world*this.config.acceleration);
-      if(row%12===3){
-        const end=this.buildElevatedCourse(world,safe,row,estimatedSpeed);
-        this.nextSafeLane=safe;this.nextRow=end+Math.max(this.config.gap,estimatedSpeed*1.6+12);continue;
+      const world=this.nextRow,row=this.rows,stage=Math.min(5,1+Math.floor(world/this.config.stageLength));
+      if(row>=this.director.nextEventRow){this.buildEncounter(world);continue;}
+      const safe=row===0?-1:this.chooseLane();
+      if(row>=this.director.nextCourseRow&&this.director.recoveryRows===0){
+        this.rows++;const end=this.buildElevatedCourse(world,safe,row,this.speedAt(world));
+        this.nextSafeLane=safe;this.nextRow=end+Math.max(this.rowGap(end),this.speedAt(end)*1.6+12);
+        this.director.nextCourseRow=this.rows+this.director.integer(7,11);continue;
       }
-      const recipes={casual:['open','open','jump','open','slide','open'],classic:['open','jump','open','slide','jumpMix','open','slideMix','open'],expert:['open','jump','slide','open','jumpMix','slideMix']};
-      const recipe=recipes[this.difficulty][row%recipes[this.difficulty].length];
-      const required=recipe.startsWith('jump')?'jump':recipe.startsWith('slide')?'slide':null;
-      const lanes=[-1,0,1].filter(l=>required||l!==safe);
-      const light=this.difficulty==='casual'&&(row<4||this.random()<.58);
-      if(light&&!required)lanes.splice(Math.floor(this.random()*2),1);
-      for(let n=0;n<lanes.length;n++){
-        const lane=lanes[n];let type;
-        if(required)type=recipe.endsWith('Mix')&&lane===lanes.find(l=>l!==safe)?'train':required==='jump'?'barrier':'gate';
-        else if(row===0)type=lane===0?'barrier':'train';
-        else if(this.difficulty==='casual'&&row<3)type='barrier';
-        else {const patterns=[['train','barrier'],['gate','barrier'],['barrier','barrier'],['train','gate'],['gate','gate'],['train','train']];type=patterns[(row+stage-1)%patterns.length][n];}
-        const approaching=type==='train'&&row>3&&row%3===1;
-        const approachSpeed=approaching?{casual:9,classic:13,expert:18}[this.difficulty]:0;
-        const spawnAhead=approaching?ahead*(1+approachSpeed/estimatedSpeed):ahead;
-        this.obstacles.push({...this.item(type,lane,spawnAhead,0),height:type==='train'?TRACK.roofHeight:undefined,approachSpeed,halfLength:type==='train'?(approaching?13.2:4.4):.65,row,rowWorld:world,required,routeLane:safe,passed:false,broken:false});
-        if(type==='barrier'&&lane!==safe&&row%2===0)for(let i=-2;i<=2;i++)this.pickups.push(this.item('coin',lane,ahead+i*2,1.3+(2-Math.abs(i))*.62));
-      }
-      const coinCount=row%6===4?13:9;const spacing=row%6===4?1.7:2.5;
-      for(let i=0;i<coinCount;i++)this.pickups.push(this.item('coin',safe,ahead+(i-(coinCount-1)/2)*spacing,required==='jump'? .95+Math.max(0,1-Math.abs(i-(coinCount-1)/2)/3)*1.8:.95));
-      if(row%2===0)this.pickups.push(this.item(this.nextBonus(),safe,ahead-15,1.15));
-      this.nextSafeLane=safe;
-      const gap=Math.max(this.config.minGap,this.config.gap-(stage-1)*2,estimatedSpeed*1.4+9.4);
-      this.nextRow+=gap+this.random()*6;
+      const plan=this.director.recipe(row,stage);this.rows++;
+      this.buildGroundRow(world,safe,row,plan.recipe,{pace:plan.pace});
+      this.nextSafeLane=safe;this.nextRow=world+this.rowGap(world)*plan.spacing+this.director.random()*7;
     }
   }
-  buildElevatedCourse(start,lane,row,speed){
-    const rampLength=Math.max(14,speed*.65),carLength=Math.max(38,speed*1.8),gapLength=Math.max(4.2,speed*.2);
+  buildGroundRow(world,safe,row,recipe,{pace='flow',eventId=null,convoy=false,level=1}={}){
+    const ahead=world-this.distance,required=recipe.startsWith('jump')?'jump':recipe.startsWith('slide')?'slide':null;
+    const lanes=[-1,0,1].filter(l=>required||l!==safe);
+    if(!required&&!convoy&&(pace==='recovery'||this.difficulty==='casual'&&this.director.random()<.5))lanes.splice(this.director.integer(0,1),1);
+    const patterns=[['train','barrier'],['gate','barrier'],['barrier','barrier'],['train','gate'],['gate','gate'],['train','train']],pattern=this.director.choose(patterns);
+    const blocked=recipe.endsWith('Mix')?this.director.choose(lanes.filter(l=>l!==safe)):null;
+    for(let n=0;n<lanes.length;n++){
+      const lane=lanes[n];let type=convoy?'train':required?lane===blocked?'train':required==='jump'?'barrier':'gate':row===0?lane===0?'barrier':'train':pattern[n];
+      if(pace==='recovery')type=this.director.choose(['barrier','gate']);
+      const approaching=type==='train'&&(convoy||row>4&&this.director.random()<.32);
+      const approachSpeed=approaching?{casual:9,classic:13,expert:18}[this.difficulty]+(convoy?(level-1)*2:0):0,halfLength=type==='train'?(approaching?13.2:this.director.choose([4.4,6.6,8.8])):.65;
+      this.obstacles.push({...this.item(type,lane,approaching?this.incomingAhead(world,approachSpeed,halfLength):ahead,0),height:type==='train'?TRACK.roofHeight:undefined,approachSpeed,halfLength,row,rowWorld:world,required,routeLane:safe,pace,eventId,passed:false,broken:false});
+    }
+    const count=pace==='recovery'?15:9,spacing=pace==='recovery'?1.7:2.5;
+    for(let i=0;i<count;i++)this.pickups.push({...this.item('coin',safe,ahead+(i-(count-1)/2)*spacing,required==='jump'?.95+Math.max(0,1-Math.abs(i-(count-1)/2)/3)*1.8:.95),eventId});
+    if(!eventId&&(row%2===0||pace==='recovery'))this.pickups.push(this.item(pace==='recovery'?'mystery':this.nextBonus(),safe,ahead-15,1.05));
+  }
+  buildEncounter(start){
+    const type=this.director.eventType(),meta=ROUTE_EVENTS[type],level=type==='courier'||this.difficulty==='casual'?1:this.director.integer(1,Math.min(3,1+Math.floor(start/700))),count=type==='courier'?3:3+Number(level>1);
+    const ev={id:++this.id,type,start,end:start,level,goal:type==='rooftop'?3:count,progress:0,passedRows:[],checkpoints:[],warned:false,started:false,finished:false,reward:meta.reward+level*100,coins:meta.coins};
+    this.encounters.push(ev);
+    if(type==='rooftop'){
+      const lane=this.chooseLane(),row=this.rows++,end=this.buildElevatedCourse(start,lane,row,this.speedAt(start),ev.id),course=this.courses.at(-1);
+      for(const world of [course.jumpAt+this.speedAt(start)*.82,course.secondRoof[0]+this.speedAt(start)*.82,course.secondRoof[1]-4])this.pickups.push({...this.item('stamp',lane,world-this.distance,TRACK.roofHeight+.95),eventId:ev.id});
+      ev.end=end+3;this.nextSafeLane=lane;
+    }else{
+      let world=start,previous=this.nextSafeLane;const first=this.director.choose(['jump','slide']);
+      for(let i=0;i<count;i++){
+        const candidates=[-1,0,1].filter(l=>Math.abs(l-previous)===1),lane=this.director.choose(candidates);
+        const recipe=type==='rhythm'?(i%2===0?first:first==='jump'?'slide':'jump')+(level===3||level>1&&i%2?'Mix':''):'open';
+        this.buildGroundRow(world,lane,this.rows++,recipe,{pace:type==='courier'?'recovery':'challenge',eventId:ev.id,convoy:type==='convoy',level});
+        if(type==='courier')this.pickups.push({...this.item('stamp',lane,world+8-this.distance,.95),eventId:ev.id});
+        if(type==='convoy')ev.checkpoints.push({world:world+this.speedAt(world)*.75+5,passed:false});
+        previous=lane;ev.end=world+this.speedAt(world)*.85+8;world+=this.rowGap(world)*(type==='courier'?1.15:1)+this.director.random()*6;
+      }
+      this.nextSafeLane=previous;
+    }
+    this.nextRow=ev.end+Math.max(this.rowGap(ev.end),this.speedAt(ev.end)*1.6+12);
+    this.director.finishEvent(this.rows,type==='rooftop');
+  }
+  recordEvent(id,row=null){
+    const ev=this.encounters.find(e=>e.id===id&&!e.finished);if(!ev||this.distance<ev.start||this.distance>ev.end+2)return;
+    if(row!==null){if(ev.passedRows.includes(row))return;ev.passedRows.push(row);}
+    ev.progress=Math.min(ev.goal,ev.progress+1);this.events.push({type:'eventProgress',eventType:ev.type,progress:ev.progress,goal:ev.goal});
+  }
+  updateEncounters(){
+    if(this.mode!=='running')return;
+    const scene=this.director.districtAt(this.distance).type;if(scene!==this.scene){this.scene=scene;this.events.push({type:'district',scene});}
+    for(const ev of this.encounters){
+      if(ev.finished)continue;
+      if(!ev.warned&&this.distance>=ev.start-this.speed*4){ev.warned=true;this.events.push({type:'eventWarning',eventType:ev.type});}
+      if(!ev.started&&this.distance>=ev.start){ev.started=true;ev.shieldsAtStart=this.savedCrashes;this.eventStats.attempted++;this.events.push({type:'eventStart',eventType:ev.type});}
+      for(const checkpoint of ev.checkpoints)if(!checkpoint.passed&&this.distance>=checkpoint.world){checkpoint.passed=true;if(this.jetpack<=0&&!this.landing&&this.savedCrashes===ev.shieldsAtStart&&this.invulnerable<=0)this.recordEvent(ev.id);}
+      if(this.distance>ev.end+2){
+        ev.finished=true;const success=ev.progress>=ev.goal;
+        if(success){this.eventStats.completed++;this.eventStats.streak++;this.eventStats.bestStreak=Math.max(this.eventStats.bestStreak,this.eventStats.streak);this.coins+=ev.coins;this.bonusCoins+=ev.coins;this.addPoints(ev.reward+ev.coins*10,'bonusPoints',false);}
+        else this.eventStats.streak=0;
+        this.lastEncounter={...ev,success,until:this.time+4};this.events.push({type:'eventFinish',eventType:ev.type,success,reward:ev.reward,coins:ev.coins});
+      }
+    }
+    this.encounters=this.encounters.filter(ev=>ev.end>this.distance-35);
+  }
+  get encounterView(){
+    const active=this.encounters.find(ev=>!ev.finished&&ev.started);if(active)return {...active,phase:'active',remaining:Math.max(0,active.end-this.distance)};
+    if(this.lastEncounter&&this.lastEncounter.until>this.time)return {...this.lastEncounter,phase:'result'};
+    const next=this.encounters.find(ev=>!ev.finished&&ev.start-this.distance<this.speed*4);return next?{...next,phase:'warning',remaining:Math.max(0,next.start-this.distance)}:null;
+  }
+  buildElevatedCourse(start,lane,row,speed,eventId=null){
+    const rampLength=Math.max(14,speed*.65)*(1+this.director.random()*.2),carLength=Math.max(38,speed*1.8)*(1+this.director.random()*.25),gapLength=Math.max(4.2,speed*.2);
     const a=start+rampLength,b=a+carLength,c=b+gapLength,d=c+carLength,end=d+rampLength;
-    const put=(type,world,halfLength,extra={})=>{const o={...this.item(type,lane,world-this.distance,0),halfLength,row,rowWorld:start,course:true,routeLane:lane,passed:false,broken:false,...extra};this.obstacles.push(o);return o;};
+    const put=(type,world,halfLength,extra={})=>{const o={...this.item(type,lane,world-this.distance,0),halfLength,row,rowWorld:start,course:true,eventId,routeLane:lane,passed:false,broken:false,...extra};this.obstacles.push(o);return o;};
     const first=put('train',(a+b)/2,carLength/2,{height:TRACK.roofHeight,roofRoute:true});
     const second=put('train',(c+d)/2,carLength/2,{height:TRACK.roofHeight,roofRoute:true});
     put('ramp',start+rampLength/2,rampLength/2,{from:0,to:TRACK.roofHeight,trainId:first.id,required:'climb'});
@@ -144,11 +198,11 @@ export class RunnerEngine {
       const arc=Math.max(0,1-Math.abs(world-jumpAt)/(speed*.28));h+=arc*1.5;
       this.pickups.push(this.item('coin',lane,world-this.distance,h+.95));
     }
-    this.pickups.push(this.item('mystery',lane,d-6-this.distance,TRACK.roofHeight+1.05));
+    this.pickups.push(this.item('mystery',lane,(eventId?end+8:d-6)-this.distance,eventId?1.05:TRACK.roofHeight+1.05));
     const incomingLane=lane===0?1:0,approachSpeed={casual:9,classic:13,expert:18}[this.difficulty];
-    const encounter=a+carLength*.65,approachAhead=(encounter-this.distance)*(1+approachSpeed/speed);
+    const encounter=a+carLength*.65,approachAhead=this.incomingAhead(encounter,approachSpeed,13.2);
     put('train',this.distance+approachAhead,13.2,{lane:incomingLane,approachSpeed,height:TRACK.roofHeight});
-    this.tunnels.push({id:++this.id,start:start-22,end:end+30,ceiling:TRACK.tunnelCeiling});
+    if(this.director.random()<.62)this.tunnels.push({id:++this.id,start:start-22,end:end+30,ceiling:TRACK.tunnelCeiling});
     this.courses.push({row,start,end,lane,firstRoof:[a,b],secondRoof:[c,d],jumpAt,slideAt});
     return end;
   }
@@ -208,9 +262,9 @@ export class RunnerEngine {
     if(!Object.hasOwn(BONUSES,type))return false;
     if(!fromMystery)this.bonusCount++;
     if(type==='mystery'){
-      const reward=Math.floor(this.random()*4);
+      const reward=Math.floor(this.rewardRandom()*4);
       if(reward<2){const coins=reward===0?25:50;this.coins+=coins;this.bonusCoins+=coins;this.addPoints(coins*10,'bonusPoints');this.events.push({type:'mystery',message:`礼盒奖励 +${coins} 金币`});}
-      else{const bonus=reward===2?'board':['magnet','double','sneakers','jetpack'][Math.floor(this.random()*4)];this.collectBonus(bonus,true);this.events.push({type:'mystery',message:`礼盒奖励 · ${BONUSES[bonus].name}`});}
+      else{const bonus=reward===2?'board':['magnet','double','sneakers','jetpack'][Math.floor(this.rewardRandom()*4)];this.collectBonus(bonus,true);this.events.push({type:'mystery',message:`礼盒奖励 · ${BONUSES[bonus].name}`});}
     }else if(type==='board'){
       if(this.boardCharges<3){this.boardCharges++;this.events.push({type:'boardPickup'});}
       else{this.coins+=20;this.bonusCoins+=20;this.addPoints(200,'bonusPoints');this.events.push({type:'mystery',message:'滑板已满 · 转为 20 金币'});}
@@ -276,13 +330,18 @@ export class RunnerEngine {
         if(hit){collision=hit;break;}
       }
       const newProtection=this.invulnerable>Math.max(0,previous.invulnerable-dt);
+      if(o.eventId&&contact&&!collision&&this.jetpack<=0&&!this.landing&&!newProtection){
+        const correct=o.type==='barrier'?!!sweepHeight(this.verticalPath,(o.y||0)+.99,100,contact):o.type==='gate'&&poses.some(p=>p.sliding&&Math.max(p.window[0],contact[0])<=Math.min(p.window[1],contact[1]));
+        if(correct&&!o.eventClean){o.eventClean=true;o.eventShields=this.savedCrashes;}
+      }
       if(collision&&this.jetpack<=0&&!this.landing&&!newProtection){
         if(this.board>0||previous.board>collision[0]*dt){this.board=0;this.invulnerable=1.4;o.broken=true;this.savedCrashes++;this.combo=0;this.events.push({type:'shieldBreak'});}
         else{this.mode='over';this.reason=o.approachSpeed?'oncoming':o.type;this.events.push({type:'crash'});break;}
       }
       if(!o.passed&&o.ahead<-o.halfLength-.4){
         o.passed=true;
-        if(o.type!=='ramp'&&dx<.8&&this.jetpack<=0&&!this.landing&&this.invulnerable<=0){this.stats.nearMisses++;this.addPoints(30,'bonusPoints');this.events.push({type:'dodge'});}
+        if(o.type!=='ramp'&&dx<.8&&this.jetpack<=0&&!this.landing&&this.invulnerable<=0){this.stats.nearMisses++;this.addPoints(30,'bonusPoints');this.events.push({type:'dodge'});
+          const ev=this.encounters.find(e=>e.id===o.eventId);if(ev?.type==='rhythm'&&o.eventClean&&o.eventShields===this.savedCrashes)this.recordEvent(ev.id,o.row);}
       }
     }
     let magnetActivatedAt=null;
@@ -315,7 +374,7 @@ export class RunnerEngine {
           this.coins++;this.combo++;this.maxCombo=Math.max(this.combo,this.maxCombo);this.comboTimer=this.config.comboWindow;
           this.addPoints(10,'coinPoints');this.events.push({type:'coin',lane:p.lane,x:this.x,y:p.flight?target.y:p.y,ahead:target.ahead,magnetic:!!p.flight});
           if(this.combo===20||this.combo===40)this.events.push({type:'combo',combo:this.combo});
-        }else{const before=this.magnet;this.collectBonus(p.type);if(this.magnet>before)magnetActivatedAt=magnetActivatedAt===null?contactTime:Math.min(magnetActivatedAt,contactTime);}
+        }else if(p.type==='stamp'){this.recordEvent(p.eventId);this.events.push({type:'stamp',x:this.x,y:p.y,ahead:target.ahead,lane:p.lane});}else{const before=this.magnet;this.collectBonus(p.type);if(this.magnet>before)magnetActivatedAt=magnetActivatedAt===null?contactTime:Math.min(magnetActivatedAt,contactTime);}
       }
     }
     // Resolve attraction after all pickups, independent of array order. Only coins
@@ -335,7 +394,7 @@ export class RunnerEngine {
     const stage=Math.min(5,1+Math.floor(this.distance/this.config.stageLength));
     if(stage>this.stage){this.stage=stage;this.events.push({type:'stage',stage});}
     this.stageProgress=this.stage===5?1:(this.distance%this.config.stageLength)/this.config.stageLength;
-    if(this.mode==='running')this.updateMissions();
+    if(this.mode==='running'){this.updateEncounters();this.updateMissions();}
     this.score=Math.floor(this.points+1e-7);this.populate();
   }
   get routeCue(){
@@ -354,5 +413,5 @@ export class RunnerEngine {
     return cues.sort((a,b)=>a.eta-b.eta)[0]||null;
   }
   drainEvents(){const e=this.events;this.events=[];return e;}
-  snapshot(){return {state:this.mode,difficulty:this.difficulty,stage:this.stage,distance:Math.floor(this.distance),score:this.score,coins:this.coins,lane:this.lane,jumping:!this.grounded&&this.jetpack<=0,height:+this.y.toFixed(2),surface:this.surface,environment:this.environment,sliding:this.slide>0,combo:this.combo,multiplier:this.multiplier,boardCharges:this.boardCharges,bonuses:Object.fromEntries(['magnet','double','sneakers','jetpack','board'].map(t=>[t,+this[t].toFixed(1)])),speed:Math.round(this.speed*3.6)};}
+  snapshot(){return {state:this.mode,difficulty:this.difficulty,stage:this.stage,distance:Math.floor(this.distance),score:this.score,coins:this.coins,lane:this.lane,jumping:!this.grounded&&this.jetpack<=0,height:+this.y.toFixed(2),surface:this.surface,environment:this.environment,scene:this.scene,event:this.encounterView?{type:this.encounterView.type,phase:this.encounterView.phase,progress:this.encounterView.progress,goal:this.encounterView.goal}:null,eventsCompleted:this.eventStats.completed,sliding:this.slide>0,combo:this.combo,multiplier:this.multiplier,boardCharges:this.boardCharges,bonuses:Object.fromEntries(['magnet','double','sneakers','jetpack','board'].map(t=>[t,+this[t].toFixed(1)])),speed:Math.round(this.speed*3.6)};}
 }

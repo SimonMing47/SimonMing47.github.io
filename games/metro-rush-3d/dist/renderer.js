@@ -1,3 +1,5 @@
+import { DISTRICTS } from './director.js';
+import { districtScenery, encounterScenery } from './district-scenery.js';
 import { multiply, transform } from './math.js';
 export { multiply, transform } from './math.js';
 import { RunnerCharacter } from './character.js';
@@ -34,7 +36,8 @@ in vec3 vColor;
 in float vFog;
 out vec4 outColor;
 uniform float uTunnelBlend;
-void main(){outColor=vec4(mix(vColor,mix(vec3(0.61,0.72,0.79),vec3(0.075,0.14,0.21),uTunnelBlend),vFog),1.0);}`;
+uniform vec3 uSky;
+void main(){outColor=vec4(mix(vColor,mix(uSky,vec3(0.075,0.14,0.21),uTunnelBlend),vFog),1.0);}`;
 
 function perspective(fov,aspect,near,far){const f=1/Math.tan(fov/2),n=1/(near-far);return new Float32Array([f/aspect,0,0,0,0,f,0,0,0,0,(far+near)*n,-1,0,0,2*far*near*n,0]);}
 function lookAt(eye,at){
@@ -100,6 +103,7 @@ export class WorldRenderer {
     this.characterBatches={rounded:new Batch(gl,roundedBoxGeometry(),256),smooth:new Batch(gl,smoothSphereGeometry(),256),torso:new Batch(gl,torsoGeometry(),8)};
     this.character=new RunnerCharacter();
     this.viewUniform=gl.getUniformLocation(this.program,'uViewProjection');this.eyeUniform=gl.getUniformLocation(this.program,'uCamera');
+    this.skyUniform=gl.getUniformLocation(this.program,'uSky');
     this.tunnelBoundsUniform=gl.getUniformLocation(this.program,'uTunnelBounds');this.tunnelBlendUniform=gl.getUniformLocation(this.program,'uTunnelBlend');
     this.camX=0;this.camHeight=0;this.demoDistance=0;this.particles=[];this.visualTime=0;this.shake=0;this.reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
     const random=randomSource(47);this.buildings=[];
@@ -253,10 +257,11 @@ export class WorldRenderer {
       for(const side of [-1,1])this.box(side*.63,7.8,portal+.75,.12,.27,.04,'#ffcf78',0,0,side*.7,1);
     }
   }
-  scenery(distance,t,tunnels=[]){
+  scenery(distance,t,tunnels=[],e=null,menu=false){
     const underground=z=>tunnels.some(s=>distance+2.5-z>=s.start&&distance+2.5-z<=s.end);
 
-    this.box(0,-.6,-86,110,1,240,'#55727b');
+    districtScenery(this,e,distance,t,menu);
+    const station=z=>menu||e.director.districtAt(Math.max(0,distance+2.5-z)).type==='station';
     this.box(0,-.23,-85,8.8,.45,240,'#425b65');
     for(const lane of [-1,0,1]){
       const x=lane*LANE_WIDTH;this.box(x,-.012,-85,2.25,.04,240,'#4b656a');
@@ -264,13 +269,13 @@ export class WorldRenderer {
       for(let i=0;i<107;i++){const z=17-i*1.9+(distance%1.9);this.box(x,-.015,z,2.12,.12,.25,'#7f8278');}
     }
     for(const s of [-1,1]){
-      this.box(s*6.07,.18,-85,3.25,.47,240,'#abb5ae');
+      for(let tile=0;tile<12;tile++){const z=15-tile*20+(distance%20);if(station(z))this.box(s*6.07,.18,z,3.25,.47,20.1,'#abb5ae');}
       this.box(s*4.62,.44,-85,.17,.045,240,'#efbd53');
       this.box(s*7.84,.59,-85,.23,1.18,240,'#617d83');
       this.box(s*7.84,1.23,-85,.27,.1,240,'#a5b6ae');
       for(let i=0;i<40;i++){const z=18-i*5+(distance%5);this.box(s*4.87,.445,z,.09,.022,2.5,'#e4d29c');}
       for(let i=0;i<12;i++){
-        const z=15-i*19+(distance%19);if(underground(z))continue;
+        const z=15-i*19+(distance%19);if(underground(z)||!station(z))continue;
         this.box(s*6.7,2.95,z,.16,5.5,.2,'#456674');
         this.box(s*6.04,5.67,z,1.5,.13,.22,'#b6c9c3');
         this.box(s*5.88,5.59,z,.93,.035,.19,'#fff0bf',0,0,0,1);
@@ -280,7 +285,7 @@ export class WorldRenderer {
     }
     // Repeated station canopies frame the track without lines crossing the roofs.
     for(let i=0;i<6;i++){
-      const z=12-i*43+(distance%43);if(underground(z))continue;
+      const z=12-i*43+(distance%43);if(underground(z)||!station(z))continue;
       for(const s of [-1,1]){
         this.box(s*7.0,3.85,z,.42,7.0,.44,'#54737e');
         this.box(s*7.0,.88,z,.65,1.05,.7,'#6f8b92');
@@ -297,7 +302,7 @@ export class WorldRenderer {
       this.box(6.3,4.73,z-3.32,1.18,.1,.02,'#edca78',0,0,0,.3);
     }
     for(const b of this.buildings){
-      const z=((b.z+distance*.52+250)%250)-230,x=b.x*b.side;
+      const z=((b.z+distance*.52+250)%250)-230,x=b.x*b.side;if(!station(z))continue;
       this.box(x,b.h/2-1,z,b.w,b.h,b.d,b.tone);
       this.box(x,b.h-.83,z,b.w+.12,.2,b.d+.12,'#91a6a7');
       if(b.h>23)this.box(x,b.h+.4,z,b.w*.48,1.3,b.d*.4,'#647e89');
@@ -306,12 +311,12 @@ export class WorldRenderer {
         this.box(x+(c-1)*b.w*.27,1+row*2.8,z+b.d/2+.013,b.w*.13,1.2,.024,lit?'#ebbf81':'#315b6c',0,0,0,lit?.45:0);
       }
     }
-    this.cylinder(30,36,-165,22,22,.6,'#ffd49c',0,0,0,1);
+    const scene=menu?'station':e.scene;this.cylinder(30,36,-165,scene==='neon'?7:22,scene==='neon'?7:22,.6,scene==='neon'?'#c6d6ef':'#ffd49c',0,0,0,1);
     // Distant bridge and skyline complete the depth beyond the station.
     this.box(0,10,-150,85,1.2,5,'#738e92');
     for(const x of [-24,-13,13,24])this.box(x,4.5,-150,1.8,10,4,'#6d898f');
   }
-  burst(p){for(let i=0;i<7;i++)this.particles.push({x:p.x??p.lane*LANE_WIDTH,y:p.y,z:2.5-p.ahead,vx:(Math.random()-.5)*3,vy:1.5+Math.random()*2,vz:2+Math.random()*2,life:.45,color:p.magnetic?'#ffc1e6':'#ffe29a'});if(this.particles.length>100)this.particles.splice(0,this.particles.length-100);}
+  burst(p){for(let i=0;i<7;i++)this.particles.push({x:p.x??p.lane*LANE_WIDTH,y:p.y,z:2.5-p.ahead,vx:(Math.random()-.5)*3,vy:1.5+Math.random()*2,vz:2+Math.random()*2,life:.45,color:p.color||(p.magnetic?'#ffc1e6':'#ffe29a')});if(this.particles.length>100)this.particles.splice(0,this.particles.length-100);}
   render(e,dt){
     const menu=e.mode==='menu';const moving=e.mode==='running'||menu;
     if(moving)this.visualTime+=dt;const t=this.visualTime;
@@ -319,7 +324,8 @@ export class WorldRenderer {
     const distance=menu?this.demoDistance:e.distance;
     this.resize();this.cubes.count=0;this.cylinders.count=0;this.spheres.count=0;
     for(const batch of Object.values(this.characterBatches))batch.count=0;
-    this.scenery(distance,t,menu?[{start:60+distance,end:150+distance}]:e.tunnels);
+    this.scenery(distance,t,menu?[{start:60+distance,end:150+distance}]:e.tunnels,e,menu);
+    if(!menu)encounterScenery(this,e,distance,t);
     if(!menu)for(const section of e.tunnels)this.tunnelSection(section,distance);
     if(menu){
       this.train(-2.7,-15,'#2c999b');
@@ -331,7 +337,11 @@ export class WorldRenderer {
       for(const o of e.obstacles)if(o.ahead-o.halfLength<180)this.obstacle(o);
       for(const p of e.pickups){
         const x=p.x??p.lane*LANE_WIDTH,z=2.5-p.ahead,y=p.y;
-        if(p.type==='coin'){
+        if(p.type==='stamp'){
+          const parent=transform(x,y,z,1,1,1,0,t*1.6);
+          this.cylinder(0,0,0,.68,.68,.16,'#70d7ff',0,0,0,.65,parent);this.box(0,0,.095,.27,.27,.055,'#edfaff',0,0,Math.PI/4,.9,parent);
+          this.cylinder(0,0,-.09,.43,.43,.025,'#b8efff',0,0,0,.8,parent);
+        }else if(p.type==='coin'){
           if(p.flight)for(let i=0;i<p.trail.length;i++){const point=p.trail[i],size=.04+i*.01;this.sphere(point.x,point.y,2.5-point.ahead,size,size,size,i%2?'#ffc2e2':'#ffe6a0',1);}
           const parent=transform(x,y,z,1,1,1,0,t*2.6+p.id*.3);
           this.cylinder(0,0,0,.58,.58,.12,'#f5c654',0,0,0,.65,parent);
@@ -355,6 +365,8 @@ export class WorldRenderer {
     const vp=multiply(perspective((mobile?66:57)*Math.PI/180,this.canvas.width/this.canvas.height,.1,300),lookAt(eye,at));
     const gl=this.gl;const tunnel=menu?{start:60+distance,end:150+distance}:e.tunnels.find(s=>s.end>distance-15&&s.start<distance+210);
     gl.useProgram(this.program);gl.uniform2fv(this.tunnelBoundsUniform,tunnel?[2.5-tunnel.end+distance,2.5-tunnel.start+distance]:[-10000,-9999]);gl.uniform1f(this.tunnelBlendUniform,menu?0:e.tunnelBlend);
+    const blend=e.director.sceneBlend(menu?0:distance),from=DISTRICTS[blend.previous.type].sky,to=DISTRICTS[blend.current.type].sky,sky=from.map((v,i)=>v+(to[i]-v)*blend.mix);
+    gl.uniform3fv(this.skyUniform,sky);gl.clearColor(...sky,1);
     gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(this.program);gl.uniformMatrix4fv(this.viewUniform,false,vp);gl.uniform3fv(this.eyeUniform,eye);this.cubes.draw();this.cylinders.draw();this.spheres.draw();for(const batch of Object.values(this.characterBatches))batch.draw();gl.bindVertexArray(null);
   }
   dispose(){this.cubes.dispose();this.cylinders.dispose();this.spheres.dispose();for(const batch of Object.values(this.characterBatches))batch.dispose();this.gl.deleteProgram(this.program);}

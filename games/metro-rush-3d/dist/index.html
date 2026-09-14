@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#142438">
-  <meta name="description" content="沿坡登上车顶，跃过车厢间隙，穿过山洞并躲避迎面列车。METRO RUSH 原创 3D 跑酷游戏。">
+  <meta name="description" content="穿行港区、森林、峡谷和霓虹夜市，挑战随机车潮、跳滑接力与车顶夺宝。METRO RUSH 原创 3D 跑酷游戏。">
   <title>METRO RUSH · 地铁疾跑</title>
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./style.css">
@@ -29,7 +29,7 @@
   </section>
   <section id="menu" aria-labelledby="game-title">
     <div class="lobby">
-      <div class="title-lockup"><span class="edition-label">城市轨道 · 无尽挑战</span><h1 id="game-title">METRO <em>RUSH<span>.</span></em></h1><p>沿坡登上车顶，穿过山洞，避开来车。</p></div>
+      <div class="title-lockup"><span class="edition-label">随机路线 · 城市冒险</span><h1 id="game-title">METRO <em>RUSH<span>.</span></em></h1><p>穿越不同街区，挑战沿途的随机事件。</p></div>
       <div class="launch-panel">
         <div class="section-top"><h2>选择难度</h2><span>01 — 03</span></div>
         <fieldset class="difficulty-options" id="difficulties" aria-describedby="difficulty-hint difficulty-pattern"><legend class="sr-only">选择难度</legend>
@@ -50,7 +50,7 @@
   <div id="bonus-notice" class="bonus-notice" role="status"><span id="notice-icon" aria-hidden="true"></span><div><strong id="notice-title"></strong><small id="notice-detail"></small></div></div>
   <div id="toast" role="status" class="toast"></div>
   <div id="combo-panel" class="combo-panel" hidden><strong id="combo-count">0</strong><span>连币</span><b id="combo-label">连续收集</b><span class="combo-track"><i id="combo-fill"></i></span></div>
-  <aside id="mission-panel" class="mission-panel" hidden><span class="mission-tag">本局挑战</span><div><strong id="mission-name">收集 50 枚金币</strong><b id="mission-reward">+500 分</b></div><span class="mission-track"><i id="mission-fill"></i></span><span id="mission-progress">0 / 50</span></aside>
+  <aside id="mission-panel" class="mission-panel" hidden><span id="mission-tag" class="mission-tag">本局挑战</span><div><strong id="mission-name">收集 50 枚金币</strong><b id="mission-reward">+500 分</b></div><p id="mission-detail" hidden></p><span class="mission-track"><i id="mission-fill"></i></span><span id="mission-progress">0 / 50</span></aside>
   <div id="power-bar" class="power-bar" aria-label="生效中的道具" hidden></div>
   <button id="board-action" class="board-action" hidden aria-label="使用护航滑板"><span id="board-icon" aria-hidden="true"></span><div><strong>护航滑板</strong><small id="board-hint">按 B 使用</small></div><b id="board-count">1</b></button>
   <div id="touch-controls" class="touch-controls" aria-label="触屏操作" hidden><button data-action="left" aria-label="向左换道">←</button><button data-action="slide" aria-label="滑铲">↓</button><button data-action="jump" aria-label="跳跃">↑</button><button data-action="right" aria-label="向右换道">→</button></div>
@@ -59,7 +59,7 @@
     <div id="result-stats" hidden><div class="result-score"><span>本次得分</span><strong id="result-score">0</strong><span id="result-mode">经典 · 基础倍率 ×1.5</span></div><div class="result-grid"><div><span>奔跑距离</span><strong id="result-distance">0 m</strong></div><div><span>收集金币</span><strong id="result-coins">0</strong></div><div><span>最高连币</span><strong id="result-combo">0</strong></div><div><span>道具拾取</span><strong id="result-bonuses">0</strong></div></div><div class="result-reward" id="result-reward"></div></div>
     <button id="resume" class="primary-button">继续奔跑 →</button><button id="home" class="text-button">返回起点 · 调整难度</button>
   </div></section>
-  <dialog id="bonus-guide" class="guide-dialog" aria-labelledby="guide-title"><div class="guide-dialog-top"><div><span class="eyebrow">METRO RUSH</span><h2 id="guide-title">跑酷指南</h2></div><button id="close-guide" class="icon-button" aria-label="关闭指南">×</button></div><nav id="guide-tabs" class="guide-tabs" aria-label="道具选择"></nav><div class="guide-list" id="guide-list" aria-live="polite"></div><details class="guide-notes" open><summary>斜坡、车顶与山洞</summary><p><b>上下列车</b>　从带箭头的斜坡跑上车顶；沿出口斜坡下车，也可向邻道跳下。</p><p><b>车顶路线</b>　可以在车顶跳跃、滑铲和收集金币。车厢断口需要提前起跳；空中下滑会快速落地并接滑铲。</p><p><b>迎面列车</b>　暖色车头带闪灯，有独立速度。看到来车提示提前换道；山洞内仍有车灯预警，超级跳跃会受洞顶限制。</p></details><details class="guide-notes"><summary>操作与得分规则</summary><p><b>连币加成</b>　20 连 ×1.5，40 连 ×2；与难度和双倍积分相乘。</p><p><b>本局挑战</b>　50 金币 +500 分，800 米 +800 分，3 道具 +600 分。</p><p><b>操作</b>　方向键 / WASD 换道、跳跃、滑铲；空格跳跃；B / 手机双击启用滑板；P / Esc 暂停。</p><p>同类道具刷新时长；休闲时长 +25%，极限时长 −15%。飞行结束安全落地，滑板抵挡一次碰撞后消耗。</p><p><b>路段提示</b>　整排低障碍需要跳跃，整排横杆需要滑铲；列车组合还需提前选道。</p></details></dialog>
+  <dialog id="bonus-guide" class="guide-dialog" aria-labelledby="guide-title"><div class="guide-dialog-top"><div><span class="eyebrow">METRO RUSH</span><h2 id="guide-title">跑酷指南</h2></div><button id="close-guide" class="icon-button" aria-label="关闭指南">×</button></div><nav id="guide-tabs" class="guide-tabs" aria-label="道具选择"></nav><div class="guide-list" id="guide-list" aria-live="polite"></div><details class="guide-notes" open><summary>随机事件与奖励</summary><p><b>限段快递</b>　按路线收集蓝色徽章，需要亲自碰到；磁铁仍只吸金币。</p><p><b>跳滑接力</b>　完成整段跳跃／滑铲组合。依靠护盾或喷气通过不计动作进度。</p><p><b>晚点车潮</b>　留意来车轨道，沿绿色信号穿行；干净通过每波来车才计进度。</p><p><b>车顶夺宝</b>　沿斜坡登顶、越过车厢间隙，收集 3 枚徽章。可以走地面绕过，未完成不扣分。</p><p>事件开始前有预告，达标后自动结算额外积分和金币。紧张段之后会出现较宽松的补给路段。</p></details><details class="guide-notes"><summary>斜坡、车顶与山洞</summary><p><b>上下列车</b>　从带箭头的斜坡跑上车顶；沿出口斜坡下车，也可向邻道跳下。</p><p><b>车顶路线</b>　可以在车顶跳跃、滑铲和收集金币。车厢断口需要提前起跳；空中下滑会快速落地并接滑铲。</p><p><b>迎面列车</b>　暖色车头带闪灯，有独立速度。看到来车提示提前换道；山洞内仍有车灯预警，超级跳跃会受洞顶限制。</p></details><details class="guide-notes"><summary>操作与得分规则</summary><p><b>连币加成</b>　20 连 ×1.5，40 连 ×2；与难度和双倍积分相乘。</p><p><b>本局挑战</b>　50 金币 +500 分，800 米 +800 分，3 道具 +600 分。</p><p><b>操作</b>　方向键 / WASD 换道、跳跃、滑铲；空格跳跃；B / 手机双击启用滑板；P / Esc 暂停。</p><p>同类道具刷新时长；休闲时长 +25%，极限时长 −15%。飞行结束安全落地，滑板抵挡一次碰撞后消耗。</p><p><b>路段提示</b>　整排低障碍需要跳跃，整排横杆需要滑铲；列车组合还需提前选道。</p></details></dialog>
   <div id="error" class="error-panel" role="alert" hidden><h2>暂时无法启动 3D 场景</h2><p id="error-text">请使用支持 WebGL 2 的浏览器，并启用硬件加速。</p><button class="primary-button" onclick="location.reload()">重新加载</button></div>
   <noscript><div class="error-panel"><h2>请启用 JavaScript 后开始游戏</h2></div></noscript>
 </main>

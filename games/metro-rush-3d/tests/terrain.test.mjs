@@ -38,7 +38,7 @@ test('long train bodies persist until their tail passes and remain collidable',(
   const e=empty();const o=train(e,-20,70,1);e.step(.05);assert.ok(e.obstacles.includes(o));e.x=2.7;e.lane=1;e.step(.05);assert.equal(e.mode,'over');
 });
 test('tunnels change environment and limit high jumps without blocking roof-level running or flight',()=>{
-  const e=empty();e.tunnels=[{start:0,end:150,ceiling:8.8}];train(e,0,200);e.y=3.3;e.floorHeight=3.3;e.surface='roof';e.sneakers=10;e.action('jump');tick(e,.65);assert.equal(e.mode,'running');assert.equal(e.environment,'tunnel');assert.ok(e.y<=6.75);assert.ok(e.drainEvents().some(x=>x.type==='ceiling'));e.collectBonus('jetpack');tick(e,1);assert.equal(e.mode,'running');assert.ok(e.y<6);e.jetpack=.01;tick(e,1.2);assert.equal(e.y,3.3);assert.ok(e.invulnerable>0);
+  const e=empty();e.tunnels=[{start:0,end:150,ceiling:8.8}];train(e,0,200);e.y=3.3;e.floorHeight=3.3;e.surface='roof';e.sneakers=10;e.action('jump');tick(e,.65);assert.equal(e.mode,'running');assert.equal(e.environment,'tunnel');assert.ok(e.y<=6.75);assert.ok(e.drainEvents().some(x=>x.type==='jump'&&x.ceilingLimited));e.collectBonus('jetpack');tick(e,1);assert.equal(e.mode,'running');assert.ok(e.y<6);e.jetpack=.01;tick(e,1.2);assert.equal(e.y,3.3);assert.ok(e.invulnerable>0);
 });
 
 test('moving-roof landing checks contact time before the train arrives or its tail departs',()=>{

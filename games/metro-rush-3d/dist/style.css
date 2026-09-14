@@ -14,3 +14,12 @@
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
 .route-status{margin-left:5px;padding:2px 7px;border:1px solid #8ecbc844;border-radius:5px;color:#a9e8d7;background:#163c4966;white-space:nowrap}.action-cue[data-action=oncoming]{border-color:#ff9a78;background:#492f32ef}.action-cue[data-action=oncoming]>span{color:#ffd0b5;background:#ff70452e}.action-cue[data-action=climb],.action-cue[data-action=descend]{border-color:#86e7d4}.action-cue[data-action=climb]>span,.action-cue[data-action=descend]>span{color:#abffdd;background:#6befc521}#app[data-environment=tunnel] .vignette{background:linear-gradient(#09182c88,transparent 24%),linear-gradient(0deg,#0a182b88,transparent 28%)}
+
+/* The same objective panel switches to the current event; no extra play overlay. */
+.mission-panel.event-active{width:280px;border-color:color-mix(in srgb,var(--event) 52%,transparent);background:linear-gradient(135deg,#193d51f5,#152d43ed)}
+.mission-panel.event-active .mission-tag,.mission-panel.event-active #mission-reward{color:var(--event)}
+.mission-panel.event-active .mission-track>i{background:var(--event)}
+.mission-panel.event-active strong{font-size:16px}.mission-panel.event-active #mission-progress{font-size:14px;color:#d2e5ed}
+#mission-detail{margin:7px 0 12px;font-size:14px;line-height:1.55;color:#c1d9e4}
+.mission-panel[data-phase=warning]{border-style:dashed}.mission-panel[data-phase=result]{background:linear-gradient(135deg,#24484ff5,#152d43ed)}
+@media(max-width:700px){.mission-panel.event-active{width:min(55vw,265px);padding:11px 12px}.mission-panel.event-active strong{font-size:15px}.mission-panel.event-active #mission-progress{font-size:13px}#mission-detail{font-size:13px;line-height:1.5;margin-bottom:9px}.mission-panel.event-active b{display:none}}
