@@ -81,13 +81,20 @@ export function encounterScenery(r,e,distance,time){
       r.box(x,5.3,z,.8,.8,.12,'#243c50');r.box(x,5.3,z+.07,.32,.32,.05,tone,0,0,Math.PI/4,.9);
     }
   }
+  for(const ev of e.encounters.filter(ev=>ev.type==='breakout')){
+    const z=2.5-ev.end+distance;if(z>20||z< -200)continue;
+    for(const side of [-1,1]){r.box(side*4.7,4.5,z,.45,9,.65,'#324e5a');r.box(side*4.7,4.2,z+.34,.22,5.5,.06,'#9befe0',0,0,0,.8);}
+    r.box(0,9.1,z,10,.5,.75,'#3e7376');
+    for(let i=-3;i<=3;i++)r.box(i*1.3,.07,z,.65,.045,1.3,i%2?'#dbefdb':'#4b8e83');
+    for(let i=0;i<ev.goal;i++)r.sphere((i-(ev.goal-1)/2)*.55,9.1,z+.42,.25,.25,.06,i<ev.progress?'#a6efd8':'#506779',.8);
+  }
   if(!view||view.phase!=='active')return;
   const ev=e.encounters.find(x=>x.id===view.id),c=ROUTE_EVENTS[view.type].color;
-  if(view.type==='convoy'){
+  if(view.type==='convoy'||view.type==='breakout'){
     const wave=e.obstacles.filter(o=>o.eventId===view.id&&o.ahead+o.halfLength>0).sort((a,b)=>a.rowWorld-b.rowWorld)[0];
     if(wave)for(const lane of [-1,0,1]){const safe=lane===wave.routeLane;r.box(lane*2.7,3.9,-13,.55,.55,.12,safe?'#8ae8c4':'#ed9b79',0,0,0,1);}
   }
-  if(view.type==='works')for(const o of e.obstacles.filter(o=>o.eventId===view.id&&o.construction&&o.ahead>0&&o.ahead<150))for(const side of [-1,1])for(let i=0;i<3;i++){
+  if(view.type==='works'||view.type==='breakout')for(const o of e.obstacles.filter(o=>o.eventId===view.id&&o.construction&&o.ahead>0&&o.ahead<150))for(const side of [-1,1])for(let i=0;i<3;i++){
     const x=o.lane*2.7+side*.96,z=2.5-o.ahead+o.halfLength+2+i*2;
     r.box(x,.08,z,.36,.16,.4,'#394a51');r.cylinder(x,.32,z,.23,.23,.48,'#efab58',Math.PI/2);r.box(x,.36,z,.24,.09,.24,'#fff0c5');
   }

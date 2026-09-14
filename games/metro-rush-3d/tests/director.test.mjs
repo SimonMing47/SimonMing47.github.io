@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { RunnerEngine, DIFFICULTIES, ROUTE_EVENTS, DISTRICTS } from '../dist/engine.js';
 import { RouteDirector, travelTime } from '../dist/director.js';
 
-function empty(mode='classic',seed=47){const e=new RunnerEngine(seed,mode);e.start();e.obstacles=[];e.pickups=[];e.tunnels=[];e.courses=[];e.encounters=[];e.lastEncounter=null;e.nextRow=1e9;return e;}
+function empty(mode='classic',seed=47){const e=new RunnerEngine(seed,mode);e.start({skipIntro:true});e.obstacles=[];e.pickups=[];e.tunnels=[];e.courses=[];e.encounters=[];e.lastEncounter=null;e.nextRow=1e9;return e;}
 function drive(e,until,dt=1/120){
   const acted=new Set(),finished=[];
   while(e.distance<until&&e.mode==='running'){
@@ -19,7 +19,7 @@ function drive(e,until,dt=1/120){
       }
     }else if(ground){lane=ground.routeLane;if(ground.required&&ground.rowWorld-e.distance<=e.speed*.4&&!acted.has(ground.row)){assert.ok(e.action(ground.required));acted.add(ground.row);}}
     if(lane!==undefined&&e.lane!==lane)e.action(e.lane<lane?'right':'left');
-    e.step(dt);finished.push(...e.drainEvents().filter(v=>v.type==='eventFinish'));
+    e.step(dt);assert.equal(e.accidents,0,'a planned route must need no collision forgiveness');if(e.mode==='escaped')e.continueRun();finished.push(...e.drainEvents().filter(v=>v.type==='eventFinish'));
   }
   return finished;
 }
@@ -36,7 +36,7 @@ test('every event can be completed with ordinary controls at all speed caps, inc
 
 test('shuffled event bags cover every type without adjacent repeats and layouts vary by seed',()=>{
   const layouts=new Set();for(let seed=1;seed<=16;seed++){
-    const d=new RouteDirector(seed,'classic'),size=Object.keys(ROUTE_EVENTS).length,types=Array.from({length:size*4},()=>d.eventType());
+    const d=new RouteDirector(seed,'classic'),size=Object.values(ROUTE_EVENTS).filter(e=>!e.gate).length,types=Array.from({length:size*4},()=>d.eventType());
     for(let i=0;i<size*4;i+=size)assert.equal(new Set(types.slice(i,i+size)).size,size);
     assert.ok(types.every((t,i)=>!i||t!==types[i-1]));
     const e=empty('classic',seed);e.director.eventBag=['rhythm'];e.buildEncounter(1000);layouts.add(JSON.stringify(e.obstacles.map(o=>[o.type,o.lane,o.rowWorld])));
@@ -73,7 +73,7 @@ test('oncoming heads arrive at their announced world position through accelerati
 
 test('multi-seed long runs keep fair paths, all event types, districts and bounded queues',()=>{
   for(const mode of Object.keys(DIFFICULTIES))for(let seed=1;seed<=6;seed++){
-    const e=new RunnerEngine(seed,mode);e.start();const finished=drive(e,5200,.05);
+    const e=new RunnerEngine(seed,mode);e.start({skipIntro:true});const finished=drive(e,8000,.05);
     assert.equal(e.mode,'running',`${mode} seed ${seed} at ${e.distance}: ${e.reason}`);
     assert.equal(new Set(finished.map(ev=>ev.eventType)).size,Object.keys(ROUTE_EVENTS).length);assert.ok(finished.every(ev=>ev.success),JSON.stringify({mode,seed,finished}));
     assert.ok(e.encounters.length<=3);assert.ok(e.obstacles.length<50);assert.ok(e.pickups.length<280);assert.ok(e.director.districts.length<=6);
@@ -139,7 +139,7 @@ test('construction blocks are real collisions and its open lanes still require j
   for(const mode of Object.keys(DIFFICULTIES)){
     const e=empty(mode);e.director.eventBag=['works'];e.buildEncounter(100);e.nextRow=1e9;
     const rows=[...new Set(e.obstacles.map(o=>o.row))];for(const row of rows){const objects=e.obstacles.filter(o=>o.row===row);assert.equal(objects.length,3);assert.equal(objects.filter(o=>o.construction).length,1);assert.equal(objects.find(o=>o.construction).type,'train');assert.equal(objects.find(o=>o.construction).approachSpeed,0);}
-    const first=e.obstacles[0];e.lane=first.routeLane;e.x=e.lane*2.7;while(e.mode==='running'&&e.distance<120)e.step(.05);assert.equal(e.mode,'over');
+    const first=e.obstacles[0];e.lane=first.routeLane;e.x=e.lane*2.7;e.pursuit.pressure=100;while(e.mode==='running'&&e.distance<120)e.step(.05);assert.equal(e.mode,'caught');
   }
 });
 

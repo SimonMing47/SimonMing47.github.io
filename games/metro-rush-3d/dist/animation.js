@@ -46,16 +46,17 @@ export function footSurface(e,x,z){
 
 export class CharacterAnimator {
   constructor(){this.reset();}
-  reset(){this.clock=0;this.phase=0;this.turn=0;this.air=0;this.flight=0;this.board=0;this.recovery=0;this.wasSliding=false;this.slideAge=0;this.landAge=10;this.jumpAge=10;this.crashAge=-1;this.pose=null;}
+  reset(){this.clock=0;this.phase=0;this.turn=0;this.air=0;this.flight=0;this.board=0;this.recovery=0;this.wasSliding=false;this.slideAge=0;this.landAge=10;this.jumpAge=10;this.crashAge=-1;this.stumbleAge=10;this.pose=null;}
   handleEvent(event){
     if(event.type==='land'||event.type==='landing')this.landAge=0;
     if(event.type==='jump'){this.jumpAge=0;this.recovery=0;}
     if(event.type==='crash')this.crashAge=0;
+    if(event.type==='stumble')this.stumbleAge=0;
   }
   update(e,dt,reduceMotion=false){
     if(e.mode==='paused'&&this.pose)return this.pose;
-    const menu=e.mode==='menu',active=e.mode==='running'||menu,delta=active?Math.min(dt,.1):this.crashAge>=0&&this.crashAge<.4?Math.min(dt,.05):0;
-    this.clock+=delta;this.landAge+=delta;this.jumpAge+=delta;if(this.crashAge>=0)this.crashAge+=delta;
+    const intro=e.mode==='intro',menu=e.mode==='menu'||intro&&e.introTime<3.3,active=['running','intro','caught'].includes(e.mode)||menu,delta=active?Math.min(dt,.1):this.crashAge>=0&&this.crashAge<.4?Math.min(dt,.05):0;
+    this.clock+=delta;this.landAge+=delta;this.jumpAge+=delta;this.stumbleAge+=delta;if(this.crashAge>=0)this.crashAge+=delta;
     const sliding=e.slide>0,flight=e.jetpack>0||e.landing;
     if(sliding){this.slideAge=this.wasSliding?this.slideAge+delta:0;this.recovery=1;}
     else{this.slideAge=0;this.recovery=Math.max(0,this.recovery-delta/(!e.grounded?.08:.19));}
@@ -65,7 +66,7 @@ export class CharacterAnimator {
     this.flight=damp(this.flight,flight?1:0,9,delta);
     this.board=damp(this.board,e.board>0&&!flight?1:0,12,delta);
     const speed=menu?0:e.speed,cadence=clamp(1.65+speed*.025,1.8,2.7);
-    if(active&&!menu&&!sliding&&e.grounded&&this.board<.5)this.phase=(this.phase+delta*cadence)%1;
+    if(active&&e.mode!=='caught'&&!menu&&!sliding&&e.grounded&&this.board<.5)this.phase=(this.phase+delta*cadence)%1;
     const wave=Math.sin(this.phase*TAU),bob=menu?(reduceMotion?0:Math.sin(this.clock*2)*.009):-Math.cos(this.phase*TAU*2)*.025;
     const landing=this.landAge<.24?Math.sin(this.landAge/.24*Math.PI)*.10:0;
     const low=sliding?1:smooth(this.recovery),board=this.board*(1-low),flying=this.flight*(1-low);
@@ -101,7 +102,17 @@ export class CharacterAnimator {
       elbow=blend(elbow,[side*.40,.33,-.12],low);hand=blend(hand,[side*.40,.09,-.21],low);
       pose.arms.push({side,shoulder,elbow,hand,wrist:wave*.08*(1-low)});
     }
-    if(this.crashAge>=0){const hit=smooth(this.crashAge/.28);pose.pitch+=hit*.28*(1-low);pose.hip[1]-=hit*.13*(1-low);pose.headPitch-=hit*.2;}
+    if(intro&&e.introTime<3.3){
+      const painting=e.introTime<2.2,t=e.introTime;pose.state=painting?'spray':'startled';pose.yaw=painting?Math.sin(t*3)*.03:-smooth((t-2.4)/.8)*.25;pose.headYaw=painting?-.1:-smooth((t-2.2)/.55)*1.3;
+      const arm=pose.arms.find(a=>a.side===1);arm.elbow=[.40,.54,-.27];arm.hand=painting?[.23,.80+Math.sin(t*5)*.12,-.60]:[.32,.27,-.25];arm.wrist=painting?Math.sin(t*5)*.10:0;
+    }else if(intro)pose.state='launch';
+    if(this.stumbleAge<.72&&!intro&&low<1){const hit=Math.sin(Math.min(1,this.stumbleAge/.72)*Math.PI)*(1-low);pose.state='stumble';pose.pitch+=hit*.24;pose.hip[1]-=hit*.13;pose.headYaw=-hit*.7;pose.roll+=Math.sin(this.stumbleAge*13)*hit*.1;for(const arm of pose.arms){arm.elbow[0]*=1+hit*.3;arm.hand[2]-=hit*.22;}}
+    if(e.mode==='caught'||e.mode==='over'){
+      pose.state=e.actorRole==='guard'?'catch':'caught';const t=smooth((e.caughtTime??1)/.7);pose.pitch+=t*.19;pose.hip[1]-=t*.12;pose.headPitch=-.25;
+      for(const foot of pose.feet){foot.target=blend(foot.target,[foot.side*.21,.105+boardBase+foot.surface.height,-.025],t);foot.pitch=mix(foot.pitch,foot.surface.pitch,t);foot.contact=t>.8;}
+      for(const arm of pose.arms){arm.elbow=[arm.side*.40,.32,-.12];arm.hand=e.actorRole==='guard'?[arm.side*.25,.45,-.72]:[arm.side*.29,.01,-.12];}
+    }
+    if(this.crashAge>=0&&e.mode!=='over'){const hit=smooth(this.crashAge/.28);pose.pitch+=hit*.28*(1-low);pose.hip[1]-=hit*.13*(1-low);pose.headPitch-=hit*.2;}
     this.pose=pose;return pose;
   }
 }
