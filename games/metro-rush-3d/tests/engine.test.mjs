@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { RunnerEngine, PHYSICS, DIFFICULTIES, BONUSES } from '../dist/engine.js';
 import { multiply, transform } from '../dist/renderer.js';
-function emptyGame(mode='classic',seed=47){const e=new RunnerEngine(seed,mode);e.start();e.obstacles=[];e.pickups=[];e.tunnels=[];e.courses=[];e.nextRow=1e9;return e;}
+// Fatal-collision fixtures start with a close pursuer; first-hit forgiveness is tested in pursuit.test.mjs.
+function emptyGame(mode='classic',seed=47){const e=new RunnerEngine(seed,mode);e.start({skipIntro:true});e.pursuit.pressure=88;e.obstacles=[];e.pickups=[];e.tunnels=[];e.courses=[];e.nextRow=1e9;return e;}
 function advance(e,seconds){for(let i=0;i<Math.round(seconds*120);i++)e.step(1/120);}
 function obstacle(e,type,ahead=0,lane=0){e.obstacles=[{id:999,type,ahead,lane,halfLength:type==='train'?4.4:.65}];}
 
@@ -14,14 +15,14 @@ test('three difficulties have different speed, scoring, supplies and maximum spe
 });
 test('lane inputs are clamped and movement interpolates to the rail',()=>{const e=emptyGame();for(let i=0;i<6;i++)e.action('left');advance(e,.5);assert.equal(e.lane,-1);assert.ok(Math.abs(e.x+2.7)<.002);for(let i=0;i<6;i++)e.action('right');advance(e,.5);assert.equal(e.lane,1);assert.ok(Math.abs(e.x-2.7)<.002);});
 test('normal jump is ballistic, cannot double jump, and lands',()=>{const e=emptyGame();assert.ok(e.action('jump'));advance(e,.16);assert.equal(e.action('jump'),false);advance(e,.24);assert.ok(e.y>2.2&&e.y<2.4);advance(e,.5);assert.equal(e.y,0);assert.equal(e.vy,0);});
-test('barriers kill standing runners and allow a correctly timed jump',()=>{const a=emptyGame();obstacle(a,'barrier');a.step(1/120);assert.equal(a.mode,'over');const b=emptyGame();obstacle(b,'barrier',8);b.action('jump');advance(b,.7);assert.equal(b.mode,'running');});
-test('gates require sliding; ordinary jumping cannot clear a train',()=>{const a=emptyGame();obstacle(a,'gate');a.step(1/120);assert.equal(a.mode,'over');const b=emptyGame();b.action('slide');obstacle(b,'gate');advance(b,.15);assert.equal(b.mode,'running');const c=emptyGame();c.action('jump');advance(c,.35);obstacle(c,'train');c.step(1/120);assert.equal(c.mode,'over');});
-test('train sides remain collidable while the runner passes their length',()=>{const e=emptyGame();e.lane=1;e.x=2.7;obstacle(e,'train');advance(e,.1);assert.equal(e.mode,'running');e.x=0;e.lane=0;e.step(1/120);assert.equal(e.mode,'over');});
+test('barriers cause capture with a close pursuer and allow a correctly timed jump',()=>{const a=emptyGame();obstacle(a,'barrier');a.step(1/120);assert.equal(a.mode,'caught');const b=emptyGame();obstacle(b,'barrier',8);b.action('jump');advance(b,.7);assert.equal(b.mode,'running');});
+test('gates require sliding; ordinary jumping cannot clear a train',()=>{const a=emptyGame();obstacle(a,'gate');a.step(1/120);assert.equal(a.mode,'caught');const b=emptyGame();b.action('slide');obstacle(b,'gate');advance(b,.15);assert.equal(b.mode,'running');const c=emptyGame();c.action('jump');advance(c,.35);obstacle(c,'train');c.step(1/120);assert.equal(c.mode,'caught');});
+test('train sides remain collidable while the runner passes their length',()=>{const e=emptyGame();e.lane=1;e.x=2.7;obstacle(e,'train');advance(e,.1);assert.equal(e.mode,'running');e.x=0;e.lane=0;e.step(1/120);assert.equal(e.mode,'caught');});
 test('super sneakers clear train height and expiry does not cancel a jump',()=>{
   const e=emptyGame();e.collectBonus('sneakers');e.sneakers=.1;e.action('jump');advance(e,.4);assert.equal(e.sneakers,0);assert.ok(e.y>3.1);obstacle(e,'train');e.step(1/120);assert.equal(e.mode,'running');e.obstacles=[];advance(e,1);assert.equal(e.y,0);
 });
 test('board activation consumes one charge and protects one crash with grace',()=>{
-  const e=emptyGame();assert.ok(e.action('board'));assert.equal(e.boardCharges,0);assert.equal(e.action('board'),false);obstacle(e,'train');e.step(1/120);assert.equal(e.mode,'running');assert.equal(e.savedCrashes,1);assert.equal(e.board,0);assert.ok(e.obstacles[0].broken);obstacle(e,'gate');advance(e,.3);assert.equal(e.mode,'running');e.obstacles=[];advance(e,1.5);obstacle(e,'train');e.step(1/120);assert.equal(e.mode,'over');
+  const e=emptyGame();assert.ok(e.action('board'));assert.equal(e.boardCharges,0);assert.equal(e.action('board'),false);obstacle(e,'train');e.step(1/120);assert.equal(e.mode,'running');assert.equal(e.savedCrashes,1);assert.equal(e.board,0);assert.ok(e.obstacles[0].broken);obstacle(e,'gate');advance(e,.3);assert.equal(e.mode,'running');e.obstacles=[];advance(e,1.5);obstacle(e,'train');e.step(1/120);assert.equal(e.mode,'caught');
 });
 test('board pickups cap inventory and convert overflow to coins',()=>{const e=emptyGame();for(let i=0;i<3;i++)e.collectBonus('board');assert.equal(e.boardCharges,3);assert.equal(e.coins,20);assert.equal(e.bonusCoins,20);});
 test('flight bypasses obstacles, suspends board timer, and lands with protection',()=>{
@@ -90,7 +91,7 @@ test('three-lane action rows cannot be bypassed by standing or weaving through l
     const e=emptyGame('expert');e.distance=1e5;e.x=x;e.lane=x<0?-1:1;
     e.obstacles=[-1,0,1].map(lane=>({id:lane+3,type,ahead:1.01,lane,halfLength:.65}));
     for(let i=0;i<20&&e.mode==='running';i++)e.step(dt);
-    assert.equal(e.mode,'over',`${type}, x=${x}, dt=${dt}`);
+    assert.equal(e.mode,'caught',`${type}, x=${x}, dt=${dt}`);
   }
 });
 test('all action layouts accept correct moves and reject the opposite action',()=>{
@@ -99,7 +100,7 @@ test('all action layouts accept correct moves and reject the opposite action',()
     e.obstacles=[-1,0,1].map(lane=>({id:lane+3,type:mixed&&lane===-1?'train':type,lane,ahead:42*.4,halfLength:mixed&&lane===-1?4.4:.65}));
     e.action((type==='barrier')===correct?'jump':'slide');
     for(let i=0;i<Math.ceil(.8/dt)&&e.mode==='running';i++)e.step(dt);
-    assert.equal(e.mode,correct?'running':'over',`${type}, mixed=${mixed}, correct=${correct}, dt=${dt}`);
+    assert.equal(e.mode,correct?'running':'caught',`${type}, mixed=${mixed}, correct=${correct}, dt=${dt}`);
   }
 });
 test('generated routes can be completed with timed jumps and slides, including speed caps and super jumps',()=>{
@@ -119,16 +120,16 @@ test('generated routes can be completed with timed jumps and slides, including s
         }
       }else if(ground){lane=ground.routeLane;if(ground.required&&ground.rowWorld-e.distance<=e.speed*.4&&!acted.has(ground.row)){assert.ok(e.action(ground.required),`${mode} ${ground.required} rejected`);acted.add(ground.row);}}
       if(lane!==undefined&&e.lane!==lane)e.action(e.lane<lane?'right':'left');
-      e.step(dt);
+      e.step(dt);if(e.mode==='escaped')e.continueRun();
     }
-    assert.equal(e.mode,'running',`${mode}, dt=${dt}, super=${superJump}, seed=${seed}, distance=${e.distance-start}, reason=${e.reason}`);
+    assert.equal(e.accidents,0);assert.equal(e.mode,'running',`${mode}, dt=${dt}, super=${superJump}, seed=${seed}, distance=${e.distance-start}, reason=${e.reason}`);
     assert.ok(acted.size>=8);
   }
 });
-test('bonus bag exposes all six pickup types before repeating',()=>{const e=emptyGame();e.bonusBag=[];const six=Array.from({length:6},()=>e.nextBonus());assert.equal(new Set(six).size,6);assert.deepEqual([...six].sort(),Object.keys(BONUSES).sort());});
+test('bonus bag exposes all pickup types before repeating',()=>{const e=emptyGame();e.bonusBag=[];const count=Object.keys(BONUSES).length,six=Array.from({length:count},()=>e.nextBonus());assert.equal(new Set(six).size,count);assert.deepEqual([...six].sort(),Object.keys(BONUSES).sort());});
 test('long play keeps object counts bounded and restart clears all bonus state',()=>{
   const e=emptyGame();e.nextRow=30;e.invulnerable=1e6;for(let i=0;i<12000;i++)e.step(1/120);assert.equal(e.mode,'running');assert.ok(e.distance>2000);assert.ok(e.obstacles.length<35);assert.ok(e.pickups.length<240);assert.ok(e.tunnels.length<3);
-  for(const type of Object.keys(BONUSES))e.collectBonus(type);e.reset(47,'expert');assert.equal(e.mode,'menu');assert.equal(e.coins,0);assert.equal(e.combo,0);assert.equal(e.bonusCount,0);for(const k of ['magnet','double','sneakers','jetpack','board'])assert.equal(e[k],0);assert.equal(e.boardCharges,1);
+  for(const type of Object.keys(BONUSES))e.collectBonus(type);e.reset(47,'expert');assert.equal(e.mode,'menu');assert.equal(e.coins,0);assert.equal(e.combo,0);assert.equal(e.bonusCount,0);for(const k of ['magnet','double','sneakers','jetpack','board','smoke'])assert.equal(e[k],0);assert.equal(e.boardCharges,1);
 });
 test('3D hierarchy preserves translation, rotation and scale',()=>{const m=multiply(transform(3,4,5),transform(0,2,0,2,3,4));assert.deepEqual([m[12],m[13],m[14]],[3,6,5]);assert.deepEqual([m[0],m[5],m[10]],[2,3,4]);const r=multiply(transform(0,0,0,1,1,1,0,Math.PI/2),transform(0,0,-2));assert.ok(Math.abs(r[12]+2)<1e-6);assert.ok(Math.abs(r[14])<1e-6);});
 
@@ -136,7 +137,7 @@ test('slide and protection expiry are evaluated at the actual swept contact time
   for(const field of ['slide','invulnerable']){
     const e=emptyGame('expert');e.distance=1e5;e[field]=.007;obstacle(e,'gate',-.9);e.step(1/120);assert.equal(e.mode,'running',field);
   }
-  const late=emptyGame('expert');late.distance=1e5;late.slide=.001;obstacle(late,'gate',1.1);late.step(1/120);assert.equal(late.mode,'over');
+  const late=emptyGame('expert');late.distance=1e5;late.slide=.001;obstacle(late,'gate',1.1);late.step(1/120);assert.equal(late.mode,'caught');
   const board=emptyGame('expert');board.distance=1e5;board.board=.007;board.invulnerable=.001;obstacle(board,'barrier',1.1);board.obstacles.push({...board.obstacles[0],id:1000});board.step(1/120);assert.equal(board.mode,'running');assert.equal(board.savedCrashes,1);
   const coin=emptyGame('expert');coin.distance=1e5;coin.slide=.007;coin.pickups=[coin.item('coin',0,1,1.8)];coin.step(1/120);assert.equal(coin.coins,0);
 });

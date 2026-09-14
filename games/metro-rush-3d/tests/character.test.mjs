@@ -6,7 +6,7 @@ import { RunnerCharacter } from '../dist/character.js';
 import { roundedBoxGeometry, smoothSphereGeometry, torsoGeometry } from '../dist/character-geometry.js';
 
 const geometry={rounded:roundedBoxGeometry(),smooth:smoothSphereGeometry(),torso:torsoGeometry()};
-function run(){const e=new RunnerEngine(47);e.start();return e;}
+function run(){const e=new RunnerEngine(47);e.start({skipIntro:true});return e;}
 function collect(character,e,dt=1/60){
   const parts=[];character.draw({characterPart(kind,matrix,color){assert.ok([...matrix].every(Number.isFinite));parts.push({kind,matrix,color});}},e,dt);return parts;
 }
@@ -69,4 +69,11 @@ test('board feet share its slope and stay above its deck in normal and sliding p
 
 test('IK keeps bone lengths finite even at a coincident or unreachable ankle target',()=>{
   for(const target of [[0,0,0],[0,-.7,.3],[0,10,0],[0,0,10]]){const root=[0,0,0],ik=solveLimb(root,target,.45,.445);assert.ok([...ik.knee,...ik.ankle].every(Number.isFinite));assert.ok(Math.abs(Math.hypot(...ik.knee)-.45)<1e-7);assert.ok(Math.abs(Math.hypot(...ik.ankle.map((v,i)=>v-ik.knee[i]))-.445)<1e-7);}
+});
+
+test('sliding immediately after a stumble stays above ground and caught feet settle without a first-frame snap',()=>{
+  const e=run(),c=new RunnerCharacter();c.animator.handleEvent({type:'stumble'});
+  for(let i=0;i<55;i++)collect(c,e,.01);e.slide=.8;const b=bounds(collect(c,e,.01));assert.ok(b.min>=-.008,JSON.stringify(b));assert.ok(b.max<=.72);
+  const a=new CharacterAnimator();e.slide=0;a.update(e,.01);e.mode='caught';e.caughtTime=0;const first=a.update(e,0),hip=first.hip[1],phase=a.phase;
+  e.caughtTime=.001;assert.ok(Math.abs(a.update(e,.001).hip[1]-hip)<.001);e.caughtTime=.7;const settled=a.update(e,.05);assert.equal(a.phase,phase);assert.ok(settled.feet.every(f=>f.contact&&Math.abs(f.target[2]+.025)<1e-6));
 });

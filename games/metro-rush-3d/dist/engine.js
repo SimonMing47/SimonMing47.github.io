@@ -1,4 +1,5 @@
 import { RouteDirector, DISTRICTS, ROUTE_EVENTS, travelTime, speedProfile } from './director.js';
+import { Pursuit, INTRO_DURATION, PURSUIT_RULES, EXIT_NAMES } from './pursuit.js';
 export { DISTRICTS, ROUTE_EVENTS } from './director.js';
 /** Deterministic gameplay. x is lateral; ahead is metres in front of the runner. */
 export const LANE_WIDTH = 2.7;
@@ -15,6 +16,7 @@ export const BONUSES = Object.freeze({
   sneakers: { name:'超级跳跃', short:'弹跳', glyph:'↑↑', color:'#92ed76', duration:10, description:'跳得更高，可落到车顶继续跑；山洞内留意洞顶高度。' },
   jetpack: { name:'喷气背包', short:'飞行', glyph:'↑', color:'#6ccfff', duration:7, description:'自动升空避开障碍，左右移动收集空中金币。' },
   board: { name:'护航滑板', short:'滑板', glyph:'▱', color:'#b699ff', duration:15, description:'拾取补充 1 块。按 B 或双击屏幕使用，抵挡一次碰撞。' },
+  smoke: { name:'迷彩喷雾', short:'烟雾', glyph:'≈', color:'#c4b0ee', duration:3, description:'立即降低追逐压力，身后留下烟雾；不能抵挡障碍，也不代替跳跃和滑铲。' },
   mystery: { name:'神秘礼盒', short:'礼盒', glyph:'?', color:'#ffad6e', duration:0, description:'随机获得金币、道具或一块护航滑板。' }
 });
 export const STAGES = ['热身起跑','穿梭街区','疾速换线','高能追逐','极限冲刺'];
@@ -49,8 +51,10 @@ export class RunnerEngine {
     if(!Object.hasOwn(DIFFICULTIES,difficulty)) throw new Error('Unknown difficulty');
     this.difficulty=difficulty;this.config=DIFFICULTIES[difficulty];this.random=randomSource(seed);this.seed=seed;this.rewardRandom=randomSource(seed^0x761ed);this.bonusRandom=randomSource(seed^0x923da);this.director=new RouteDirector(seed,difficulty);this.mode='menu';
     this.distance=0;this.time=0;this.speed=this.config.startSpeed;this.stage=1;this.stageProgress=0;
+    this.introTime=0;this.caughtTime=0;this.pausedFrom=null;this.recovery=null;this.pursuit=new Pursuit(difficulty);this.accidents=0;
+    this.story={leg:1,completed:0,name:EXIT_NAMES[0],target:PURSUIT_RULES[difficulty].exitDistance,scheduled:false};
     this.lane=0;this.x=0;this.y=0;this.vy=0;this.slide=0;this.slideQueued=false;this.grounded=true;this.floorHeight=0;this.supportId=null;this.surface='ground';this.coins=0;this.score=0;this.points=0;
-    this.magnet=0;this.double=0;this.sneakers=0;this.jetpack=0;this.board=0;this.invulnerable=0;this.landing=false;
+    this.magnet=0;this.double=0;this.sneakers=0;this.jetpack=0;this.board=0;this.smoke=0;this.invulnerable=0;this.landing=false;
     this.boardCharges=this.config.boards;this.boardsUsed=0;this.savedCrashes=0;
     this.combo=0;this.maxCombo=0;this.comboTimer=0;this.bonusCount=0;this.bonusCoins=0;
     this.stats={ coinPoints:0,distancePoints:0,bonusPoints:0,nearMisses:0,cleanJumps:0,cleanSlides:0,collectedCoins:0 };
@@ -63,13 +67,15 @@ export class RunnerEngine {
     this.populate();
   }
   item(type,lane,ahead,y=.95) { return {id:++this.id,type,lane,ahead,y}; }
-  start(){if(this.mode!=='menu')return false;this.mode='running';return true;}
-  pause(){if(this.mode!=='running')return false;this.mode='paused';return true;}
-  resume(){if(this.mode!=='paused')return false;this.mode='running';return true;}
+  start({skipIntro=false}={}){if(this.mode!=='menu')return false;this.mode=skipIntro?'running':'intro';this.introTime=skipIntro?INTRO_DURATION:0;return true;}
+  skipIntro(){if(this.mode!=='intro')return false;this.introTime=INTRO_DURATION;this.mode='running';this.events.push({type:'launch'});return true;}
+  pause(){if(!['intro','running','caught'].includes(this.mode))return false;this.pausedFrom=this.mode;this.mode='paused';return true;}
+  resume(){if(this.mode!=='paused')return false;this.mode=this.pausedFrom||'running';this.pausedFrom=null;return true;}
+  continueRun(){if(this.mode!=='escaped')return false;this.mode='running';this.story.leg++;this.story.name=EXIT_NAMES[(this.story.leg-1)%EXIT_NAMES.length];this.story.target=this.distance+PURSUIT_RULES[this.difficulty].exitDistance;this.story.scheduled=false;this.pursuit.pressure=18;this.events.push({type:'nextLeg'});return true;}
   get comboMultiplier(){return this.combo>=40?2:this.combo>=20?1.5:1;}
   get multiplier(){return this.config.multiplier*this.comboMultiplier*(this.double>0?2:1);}
   action(action){
-    if(this.mode!=='running')return false;
+    if(this.mode!=='running'||this.recovery)return false;
     if(action==='left'||action==='right'){
       const lane=clamp(this.lane+(action==='left'?-1:1),-1,1);if(lane===this.lane)return false;
       this.lane=lane;this.events.push({type:'move'});return true;
@@ -105,6 +111,7 @@ export class RunnerEngine {
     this.director.ensureDistricts(this.distance);
     while(this.nextRow-this.distance<Math.max(180,this.config.maxSpeed*1.42*5.2)){
       const world=this.nextRow,row=this.rows,stage=Math.min(5,1+Math.floor(world/this.config.stageLength));
+      if(!this.story.scheduled&&world>=this.story.target){this.buildEncounter(world,'breakout');continue;}
       if(row>=this.director.nextEventRow){this.buildEncounter(world);continue;}
       const safe=row===0?-1:this.chooseLane();
       if(row>=this.director.nextCourseRow&&this.director.recoveryRows===0){
@@ -134,8 +141,8 @@ export class RunnerEngine {
     for(let i=0;i<count;i++)this.pickups.push({...this.item('coin',safe,ahead+(i-(count-1)/2)*spacing,required==='jump'?.95+Math.max(0,1-Math.abs(i-(count-1)/2)/3)*1.8:.95),eventId});
     if(!eventId&&(row%2===0||pace==='recovery'))this.pickups.push(this.item(pace==='recovery'?'mystery':this.nextBonus(),safe,ahead-15,1.05));
   }
-  buildEncounter(start){
-    const type=this.director.eventType(),meta=ROUTE_EVENTS[type],level=type==='courier'||this.difficulty==='casual'?1:this.director.integer(1,Math.min(3,1+Math.floor(start/700))),count=type==='courier'?3:3+Number(level>1);
+  buildEncounter(start,forcedType=null){
+    const type=forcedType||this.director.eventType(),meta=ROUTE_EVENTS[type],level=type==='courier'||this.difficulty==='casual'?1:this.director.integer(1,Math.min(3,1+Math.floor(start/700))),count=type==='breakout'?PURSUIT_RULES[this.difficulty].waves:type==='courier'?3:3+Number(level>1);
     const ev={id:++this.id,type,start,end:start,level,goal:type==='rooftop'?3:count,progress:0,passedRows:[],checkpoints:[],warned:false,started:false,finished:false,reward:meta.reward+level*100,coins:meta.coins};
     ev.warnAt=this.afterSeconds(start,-4);this.encounters.push(ev);
     if(type==='rooftop'){
@@ -149,20 +156,22 @@ export class RunnerEngine {
       let world=start,previous=this.nextSafeLane;const first=this.director.choose(['jump','slide']);
       for(let i=0;i<count;i++){
         const candidates=[-1,0,1].filter(l=>Math.abs(l-previous)===1),lane=this.director.choose(candidates);
-        const recipe=['rhythm','works'].includes(type)?(i%2===0?first:first==='jump'?'slide':'jump')+(level===3||level>1&&i%2?'Mix':''):'open';
-        const closedLane=type==='works'?this.director.choose([-1,0,1].filter(l=>l!==lane)):null;
-        this.buildGroundRow(world,lane,this.rows++,recipe,{pace:type==='courier'?'recovery':'challenge',eventId:ev.id,convoy:type==='convoy',level,closedLane});
+        const escapeConvoy=type==='breakout'&&i%3===0;
+        const recipe=type==='breakout'?(escapeConvoy?'open':i%3===1?'jumpMix':'slideMix'):['rhythm','works'].includes(type)?(i%2===0?first:first==='jump'?'slide':'jump')+(level===3||level>1&&i%2?'Mix':''):'open';
+        const closedLane=type==='works'||type==='breakout'&&!escapeConvoy?this.director.choose([-1,0,1].filter(l=>l!==lane)):null;
+        const row=this.rows++;this.buildGroundRow(world,lane,row,recipe,{pace:type==='courier'?'recovery':'challenge',eventId:ev.id,convoy:type==='convoy'||escapeConvoy,level: type==='breakout'?Math.max(2,level):level,closedLane});
         if(type==='courier')this.pickups.push({...this.item('stamp',lane,world+8-this.distance,.95),eventId:ev.id});
-        if(type==='convoy')ev.checkpoints.push({world:world+this.speedAt(world)*.75+5,passed:false});
+        if(type==='convoy'||escapeConvoy)ev.checkpoints.push({world:world+this.speedAt(world)*.75+5,passed:false,row});
         previous=lane;ev.end=world+this.speedAt(world)*.85+8;world+=this.rowGap(world)*(type==='courier'?1.15:1)+this.director.random()*6;
       }
       this.nextSafeLane=previous;
     }
+    if(type==='breakout'){this.story.scheduled=true;this.story.target=ev.end;ev.exitName=this.story.name;}
     this.nextRow=ev.end+Math.max(this.rowGap(ev.end),this.speedAt(ev.end)*1.6+12);
     this.director.finishEvent(this.rows,type==='rooftop');
   }
   recordEvent(id,row=null,roof=null){
-    const ev=this.encounters.find(e=>e.id===id&&!e.finished);if(!ev||this.distance<ev.start||this.distance>ev.end+2)return;
+    const ev=this.encounters.find(e=>e.id===id&&!e.finished);if(!ev||ev.tainted||this.distance<ev.start||this.distance>ev.end+2)return;
     if(row!==null){if(ev.passedRows.includes(row))return;ev.passedRows.push(row);}
     if(ev.type==='rooftop'&&roof!==null){if(roof){ev.roofBadges++;ev.reward+=200;ev.coins+=10;}else ev.groundBadges++;}
     ev.progress=Math.min(ev.goal,ev.progress+1);this.events.push({type:'eventProgress',eventType:ev.type,progress:ev.progress,goal:ev.goal});
@@ -173,15 +182,20 @@ export class RunnerEngine {
     for(const ev of this.encounters){
       if(ev.finished)continue;
       if(!ev.warned&&this.distance>=(ev.warnAt??ev.start-this.speed*4)){ev.warned=true;this.events.push({type:'eventWarning',eventType:ev.type});}
-      if(!ev.started&&this.distance>=ev.start){ev.started=true;ev.shieldsAtStart=this.savedCrashes;this.eventStats.attempted++;this.events.push({type:'eventStart',eventType:ev.type});}
-      for(const checkpoint of ev.checkpoints)if(!checkpoint.passed&&this.distance>=checkpoint.world){checkpoint.passed=true;if(this.jetpack<=0&&!this.landing&&this.savedCrashes===ev.shieldsAtStart&&this.invulnerable<=0)this.recordEvent(ev.id);}
+      if(!ev.started&&this.distance>=ev.start){ev.started=true;ev.damageAtStart=this.accidents;this.eventStats.attempted++;this.events.push({type:'eventStart',eventType:ev.type});}
+      for(const checkpoint of ev.checkpoints)if(!checkpoint.passed&&this.distance>=checkpoint.world){checkpoint.passed=true;if(this.jetpack<=0&&!this.landing&&this.accidents===ev.damageAtStart&&this.invulnerable<=0)this.recordEvent(ev.id,checkpoint.row??null);}
       if(this.distance>ev.end+2){
-        ev.finished=true;const success=ev.progress>=ev.goal;
+        ev.finished=true;const success=!ev.tainted&&ev.progress>=ev.goal;
         if(success){this.eventStats.completed++;this.eventStats.streak++;this.eventStats.bestStreak=Math.max(this.eventStats.bestStreak,this.eventStats.streak);
           if(this.eventStats.streak%3===0){ev.streakReward=true;ev.reward+=500;ev.coins+=30;if(this.boardCharges<3)this.boardCharges++;else ev.coins+=20;}
           this.coins+=ev.coins;this.bonusCoins+=ev.coins;this.addPoints(ev.reward+ev.coins*10,'bonusPoints',false);}
         else this.eventStats.streak=0;
         this.lastEncounter={...ev,success,until:this.time+4};this.events.push({type:'eventFinish',eventType:ev.type,success,reward:ev.reward,coins:ev.coins,streakReward:ev.streakReward});
+        if(ev.type==='breakout'){
+          this.story.scheduled=false;
+          if(success){this.story.completed++;this.pursuit.escape();this.mode='escaped';this.events.push({type:'escape',name:this.story.name});}
+          else{this.story.target=ev.end+650;this.events.push({type:'exitMissed'});}
+        }
       }
     }
     this.encounters=this.encounters.filter(ev=>ev.end>this.distance-35);
@@ -283,6 +297,7 @@ export class RunnerEngine {
     }else{
       // Same-type pickup refreshes duration; different types may coexist.
       this[type]=BONUSES[type].duration*this.config.bonusScale;
+      if(type==='smoke'){const danger=this.pursuit.danger;this.pursuit.pressure=Math.max(18,this.pursuit.pressure-42);if(danger&&!this.pursuit.danger){this.pursuit.recoveries++;this.events.push({type:'chaseClear'});}}
       if(type==='jetpack'){this.vy=0;this.grounded=false;this.slide=0;this.slideQueued=false;this.landing=false;this.nextAirCoin=this.distance+7;this.pickups=this.pickups.filter(p=>!p.air);}
       this.events.push({type,duration:this[type]});
     }return true;
@@ -298,8 +313,47 @@ export class RunnerEngine {
       this.missions=Array.from({length:3},(_,i)=>{const [id,target,verb,unit]=pool[(offset+i)%pool.length];return {id,target,name:`${verb} ${target} ${unit}`,baseline:this.missionValue(id),progress:0,reward:600+tier*150,done:false};});
     }
   }
+  recoverFrom(o){
+    // Freeze the world for a short recoil. Trains, pickups and their ETA all stop
+    // together. Resolve into clear space; a long carriage is never deleted.
+    const support=this.obstacles.filter(b=>!b.broken&&['train','ramp'].includes(b.type)&&Math.abs(b.lane*LANE_WIDTH-this.x)<TRACK.roofHalfWidth&&Math.abs(b.ahead)<b.halfLength&&this.surfaceHeight(b)<=this.y+.16).sort((a,b)=>this.surfaceHeight(b)-this.surfaceHeight(a))[0];
+    const floor=support?this.surfaceHeight(support):0,solid=lane=>this.obstacles.filter(b=>!b.broken&&b.lane===lane&&['train','ramp'].includes(b.type)&&b.ahead-b.halfLength<this.speed*1.1+(b.approachSpeed||0)*1.1&&b.ahead+b.halfLength>-.5&&(b.type==='ramp'||(b.height??TRACK.roofHeight)>floor+.15));
+    let targetLane=support?support.lane:this.lane,targetY=floor,supportId=support?.id??null,vault=false;
+    if(['train','ramp'].includes(o.type)){
+      const available=[-1,0,1].filter(l=>solid(l).length===0).sort((a,b)=>Math.abs(a-this.lane)-Math.abs(b-this.lane));
+      if(available.length){targetLane=available[0];targetY=0;supportId=null;}
+      else if(o.type==='train'){targetLane=o.lane;targetY=o.height??TRACK.roofHeight;supportId=o.id;vault=true;}
+    }
+    const duration=vault?.72:.55;
+    this.recovery={age:0,duration,fromX:this.x,fromY:this.y,targetLane,targetY,supportId,vault};
+    for(const b of this.obstacles)if(b===o||!o.course&&!b.course&&o.row!==undefined&&b.row===o.row||this.accidentContact(b)){b.accidentIgnored=true;b.passed=true;}
+    this.slide=0;this.slideQueued=false;this.vy=0;this.combo=0;this.comboTimer=0;this.invulnerable=1.1;
+    this.events.push({type:'stumble',obstacle:o.type,vault});
+  }
+  accidentContact(o){
+    if(o.broken||o.type==='gap'||Math.abs(o.ahead)>o.halfLength+.4||Math.abs(o.lane*LANE_WIDTH-this.x)>1.4)return false;
+    if(o.type==='train')return this.y<(o.height??TRACK.roofHeight)-.12;
+    if(o.type==='ramp')return this.y<this.surfaceHeight(o)-.16;
+    const base=o.y||0;return o.type==='gate'?this.y<base+3.16&&this.y+(this.slide>0?.72:2.05)>base+1.22:this.y<base+.99;
+  }
+  stepRecovery(dt){
+    const r=this.recovery;r.age=Math.min(r.duration,r.age+dt);const u=r.age/r.duration,s=u*u*(3-2*u);
+    this.x=r.fromX+(r.targetLane*LANE_WIDTH-r.fromX)*s;this.y=r.fromY+(r.targetY-r.fromY)*s+(r.vault?1.1:.16)*Math.sin(u*Math.PI);
+    if(u>=1){this.lane=r.targetLane;this.y=r.targetY;this.floorHeight=r.targetY;this.supportId=r.supportId;this.grounded=true;this.surface=r.targetY>1?'roof':'ground';this.recovery=null;this.events.push({type:'recovered'});}
+  }
+  impact(o,shield){
+    this.accidents++;this.eventStats.streak=0;
+    const encounter=this.encounters.find(e=>e.id===o.eventId&&!e.finished);if(encounter)encounter.tainted=true;
+    if(shield){this.board=0;this.invulnerable=1.4;o.broken=true;this.savedCrashes++;this.combo=0;this.events.push({type:'shieldBreak'});return;}
+    if(this.pursuit.hit()==='caught'){this.mode='caught';this.caughtTime=0;this.reason=o.approachSpeed?'oncoming':o.type;this.events.push({type:'caught'});}
+    else this.recoverFrom(o);
+  }
   step(dt){
-    if(this.mode!=='running')return;dt=clamp(dt,0,.05);if(!dt)return;
+    dt=clamp(dt,0,.05);if(!dt)return;
+    if(this.mode==='intro'){const before=this.introTime;this.introTime=Math.min(INTRO_DURATION,this.introTime+dt);if(before<2.2&&this.introTime>=2.2)this.events.push({type:'discovered'});if(this.introTime>=INTRO_DURATION)this.skipIntro();return;}
+    if(this.mode==='caught'){this.caughtTime=Math.min(1.05,this.caughtTime+dt);if(this.caughtTime>=1.05){this.mode='over';this.events.push({type:'crash'});}return;}
+    if(this.mode!=='running')return;
+    if(this.recovery){this.stepRecovery(dt);return;}
     const previous={x:this.x,y:this.y,slide:this.slide,invulnerable:this.invulnerable,board:this.board,grounded:this.grounded&&Math.abs(this.y-this.floorHeight)<.05&&this.vy<=0,supportId:this.supportId},magnetWas=this.magnet;
     let poses=poseWindows(previous.slide,dt);
     this.time+=dt;this.speed=this.speedAt(this.distance+this.speedAt(this.distance)*dt/2);
@@ -310,7 +364,7 @@ export class RunnerEngine {
     this.slide=Math.max(0,this.slide-dt);this.invulnerable=Math.max(0,this.invulnerable-dt);
     this.comboTimer=Math.max(0,this.comboTimer-dt);if(this.comboTimer===0)this.combo=0;
     // Flight suspends the board timer, so a stored shield is not wasted in the air.
-    for(const type of ['magnet','double','sneakers','jetpack','board']){
+    for(const type of ['magnet','double','sneakers','jetpack','board','smoke']){
       if(type==='board'&&this.jetpack>0)continue;
       const was=this[type];this[type]=Math.max(0,was-dt);
       if(type==='jetpack'&&was>0&&this[type]===0){this.landing=true;this.vy=0;this.events.push({type:'landing'});}
@@ -334,7 +388,8 @@ export class RunnerEngine {
     this.tunnelBlend=this.tunnels.reduce((max,t)=>Math.max(max,clamp((this.distance-t.start+12)/24,0,1)*clamp((t.end-this.distance+12)/24,0,1)),0);
     if(tunnel&&this.y+2.05>Math.min(tunnel.ceiling,tunnelClearance(this.x))){this.y=Math.min(tunnel.ceiling,tunnelClearance(this.x))-2.05;this.vy=Math.min(0,this.vy);this.verticalPath=this.verticalPath.map(p=>({...p,y0:Math.min(p.y0,this.y),y1:Math.min(p.y1,this.y)}));this.events.push({type:'ceiling'});}
     for(const o of this.obstacles){
-      if(o.broken||o.type==='gap')continue;
+      if(o.accidentIgnored&&this.invulnerable<=0&&!this.accidentContact(o))o.accidentIgnored=false;
+      if(o.broken||o.type==='gap'||o.accidentIgnored)continue;
       if(o.approachSpeed&&!o.warned&&o.ahead>0&&(o.ahead-o.halfLength)/(this.speed+o.approachSpeed)<2.2){o.warned=true;this.events.push({type:'trainWarning',lane:o.lane});}
       const dx=Math.abs(this.x-o.lane*LANE_WIDTH);
       let contact=sweepRange(o.previousAhead,o.ahead,-o.halfLength-.3,o.halfLength+.3);
@@ -352,21 +407,21 @@ export class RunnerEngine {
       const newProtection=this.invulnerable>Math.max(0,previous.invulnerable-dt);
       if(contact&&!collision&&this.jetpack<=0&&!this.landing&&!newProtection&&previous.invulnerable<=0){
         const correct=o.type==='barrier'?!!sweepHeight(this.verticalPath,(o.y||0)+.99,100,contact):o.type==='gate'&&poses.some(p=>p.sliding&&Math.max(p.window[0],contact[0])<=Math.min(p.window[1],contact[1]));
-        if(correct&&!o.eventClean){o.eventClean=true;o.eventShields=this.savedCrashes;}
+        if(correct&&!o.eventClean){o.eventClean=true;o.eventDamage=this.accidents;}
       }
       if(collision&&this.jetpack<=0&&!this.landing&&!newProtection){
-        if(this.board>0||previous.board>collision[0]*dt){this.board=0;this.invulnerable=1.4;o.broken=true;this.savedCrashes++;this.combo=0;this.events.push({type:'shieldBreak'});}
-        else{this.mode='over';this.reason=o.approachSpeed?'oncoming':o.type;this.events.push({type:'crash'});break;}
+        this.impact(o,this.board>0||previous.board>collision[0]*dt);if(this.recovery||this.mode==='caught')break;
       }
       if(!o.passed&&o.ahead<-o.halfLength-.4){
         o.passed=true;
         if(o.type!=='ramp'&&dx<.8&&this.jetpack<=0&&!this.landing&&this.invulnerable<=0){this.stats.nearMisses++;this.addPoints(30,'bonusPoints');this.events.push({type:'dodge'});
-          if(o.eventClean&&o.eventShields===this.savedCrashes){if(o.type==='barrier')this.stats.cleanJumps++;if(o.type==='gate')this.stats.cleanSlides++;
-            const ev=this.encounters.find(e=>e.id===o.eventId);if(['rhythm','works'].includes(ev?.type))this.recordEvent(ev.id,o.row);}}
+          if(o.eventClean&&o.eventDamage===this.accidents){if(o.type==='barrier')this.stats.cleanJumps++;if(o.type==='gate')this.stats.cleanSlides++;
+            if(this.pursuit.skill())this.events.push({type:'chaseClear'});
+            const ev=this.encounters.find(e=>e.id===o.eventId);if(['rhythm','works','breakout'].includes(ev?.type))this.recordEvent(ev.id,o.row);}}
       }
     }
     let magnetActivatedAt=null;
-    if(this.mode==='running')for(const p of this.pickups){
+    if(this.mode==='running'&&!this.recovery)for(const p of this.pickups){
       if(p.collected)continue;
       const target=pickupPose(this);
       let contact=false,contactTime=0;
@@ -415,11 +470,11 @@ export class RunnerEngine {
     const stage=1+Math.floor(this.distance/this.config.stageLength);
     if(stage>this.stage){this.stage=stage;this.events.push({type:'stage',stage});}
     this.stageProgress=(this.distance%this.config.stageLength)/this.config.stageLength;
-    if(this.mode==='running'){this.updateEncounters();this.updateMissions();}
-    this.score=Math.floor(this.points+1e-7);this.populate();
+    if(this.mode==='running'&&!this.recovery){if(this.pursuit.step(dt))this.events.push({type:'chaseClear'});this.updateEncounters();this.updateMissions();}
+    this.score=Math.floor(this.points+1e-7);if(this.mode==='running')this.populate();
   }
   get routeCue(){
-    if(this.jetpack>0||this.landing)return null;
+    if(this.jetpack>0||this.landing||this.recovery)return null;
     const cues=[];
     for(const o of this.obstacles){
       if(o.broken)continue;
@@ -434,5 +489,5 @@ export class RunnerEngine {
     return cues.sort((a,b)=>a.eta-b.eta)[0]||null;
   }
   drainEvents(){const e=this.events;this.events=[];return e;}
-  snapshot(){return {state:this.mode,difficulty:this.difficulty,stage:this.stage,distance:Math.floor(this.distance),score:this.score,coins:this.coins,lane:this.lane,jumping:!this.grounded&&this.jetpack<=0,height:+this.y.toFixed(2),surface:this.surface,environment:this.environment,scene:this.scene,event:this.encounterView?{type:this.encounterView.type,phase:this.encounterView.phase,progress:this.encounterView.progress,goal:this.encounterView.goal}:null,eventsCompleted:this.eventStats.completed,sliding:this.slide>0,combo:this.combo,multiplier:this.multiplier,boardCharges:this.boardCharges,bonuses:Object.fromEntries(['magnet','double','sneakers','jetpack','board'].map(t=>[t,+this[t].toFixed(1)])),pace:this.paceView.phase,peakSpeed:Math.round(this.peakSpeed*3.6),missionsCompleted:this.missionsCompleted,speed:Math.round(this.speed*3.6)};}
+  snapshot(){return {state:this.mode,introTime:+this.introTime.toFixed(2),chase:{pressure:Math.round(this.pursuit.pressure),danger:this.pursuit.danger,recoverySeconds:this.pursuit.seconds,hits:this.pursuit.hits},story:{...this.story},recovering:!!this.recovery,accidents:this.accidents,difficulty:this.difficulty,stage:this.stage,distance:Math.floor(this.distance),score:this.score,coins:this.coins,lane:this.lane,jumping:!this.grounded&&this.jetpack<=0,height:+this.y.toFixed(2),surface:this.surface,environment:this.environment,scene:this.scene,event:this.encounterView?{type:this.encounterView.type,phase:this.encounterView.phase,progress:this.encounterView.progress,goal:this.encounterView.goal}:null,eventsCompleted:this.eventStats.completed,sliding:this.slide>0,combo:this.combo,multiplier:this.multiplier,boardCharges:this.boardCharges,bonuses:Object.fromEntries(['magnet','double','sneakers','jetpack','board','smoke'].map(t=>[t,+this[t].toFixed(1)])),pace:this.paceView.phase,peakSpeed:Math.round(this.peakSpeed*3.6),missionsCompleted:this.missionsCompleted,speed:Math.round(this.speed*3.6)};}
 }

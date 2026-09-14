@@ -2,6 +2,7 @@ import { multiply, transform } from './math.js';
 import { CharacterAnimator, solveLimb } from './animation.js';
 
 const palette={skin:'#e7b18b',skinLight:'#f1c49e',skinShade:'#c88767',hair:'#302d30',ink:'#243d4d',jacket:'#34a8a5',jacketLight:'#5dc4b8',jacketShade:'#238184',rib:'#236e75',pants:'#294c64',pantsShade:'#203d54',stitch:'#587a88',cream:'#eee7d1',gold:'#f3be54',pack:'#d98b43',packLight:'#efad59'};
+const guardPalette={...palette,jacket:'#304b69',jacketLight:'#93b7c7',jacketShade:'#233c58',rib:'#263748',pants:'#24364c',pantsShade:'#192b40',gold:'#293e56',cream:'#e5dfb1',hair:'#5b4e45'};
 
 // Bone frames are rigid. Nonuniform sizing is applied only to leaf meshes, so
 // normals stay correct and the joints never squash or shear during transitions.
@@ -16,9 +17,9 @@ export class RunnerCharacter {
   constructor(){this.animator=new CharacterAnimator();}
   reset(){this.animator.reset();}
   handleEvent(event){this.animator.handleEvent(event);}
-  draw(renderer,e,dt,reduceMotion=false){
-    const pose=this.animator.update(e,dt,reduceMotion),p=palette;
-    const root=transform(e.mode==='menu'?0:e.x,e.y,2.5,1,1,1,0,e.mode==='menu'?-.42:0);
+  draw(renderer,e,dt,reduceMotion=false,options={}){
+    const pose=this.animator.update(e,dt,reduceMotion),guard=options.role==='guard',p=guard?guardPalette:palette;
+    const scale=options.scale??1,root=transform(options.x??(e.mode==='menu'?0:e.x),options.y??e.y,options.z??2.5,scale,scale,scale,0,options.yaw??(e.mode==='menu'?-.42:0));
     const body=multiply(root,transform(...pose.hip,1,1,1,pose.pitch,pose.yaw,pose.roll));
     const mesh=(kind,parent,x,y,z,w,h,d,c,rx=0,ry=0,rz=0,glow=0)=>renderer.characterPart(kind,multiply(parent,transform(x,y,z,w,h,d,rx,ry,rz)),c,glow);
     const soft=(...args)=>mesh('rounded',...args),sphere=(...args)=>mesh('smooth',...args);
@@ -33,7 +34,7 @@ export class RunnerCharacter {
       soft(body,side*.12,.30,-.229,.015,.10,.017,p.jacketLight,0,0,side*-.34);
       segment(body,[side*.08,.58,-.205],[side*.09,.40,-.233],.018,.018,p.cream);
       soft(body,side*.09,.40,-.24,.026,.04,.022,p.ink);
-      sphere(body,side*.13,.623,.065,.30,.20,.34,p.jacketShade,0,0,side*.25);
+      if(!guard)sphere(body,side*.13,.623,.065,.30,.20,.34,p.jacketShade,0,0,side*.25);
       soft(body,side*.19,.495,-.18,.055,.33,.044,p.ink,-.15,0,side*-.14);
       soft(body,side*.185,.60,.23,.06,.15,.09,p.ink,.3);
     }
@@ -45,6 +46,7 @@ export class RunnerCharacter {
     soft(body,-.19,.47,-.23,.043,.015,.016,p.jacketShade,0,0,-.5);
 
     const low=pose.low,packZ=.315-low*.11,packDepth=.23-low*.10;
+    if(!guard){
     soft(body,0,.355,packZ,.44,.51,packDepth,p.pack);
     soft(body,0,.53,packZ+packDepth*.43,.42,.145,.065,p.packLight);
     soft(body,0,.24,packZ+packDepth*.50,.32,.155,.045,p.packLight);
@@ -53,6 +55,11 @@ export class RunnerCharacter {
     for(const side of [-1,1])soft(body,side*.175,.36,packZ+packDepth*.48,.018,.35,.012,'#b06d38');
     soft(body,0,.45,packZ+packDepth*.60,.15,.075,.02,p.cream);
     soft(body,0,.45,packZ+packDepth*.67,.06,.018,.008,p.jacketShade,0,0,-.45);
+    }else{
+      soft(body,0,.09,0,.55,.10,.42,p.ink);soft(body,0,.09,-.225,.13,.10,.028,'#d1b977');
+      soft(body,-.19,.44,-.236,.12,.15,.035,'#d6c689');soft(body,.30,.19,.025,.14,.24,.12,'#1b2f43');
+      soft(body,.30,.38,.025,.025,.17,.025,p.ink);soft(body,0,.41,.231,.45,.055,.025,'#a5d4d6');
+    }
 
     // Neck and head have their own counter-rotation: the gaze stays ahead while
     // the torso leans into a turn, compresses on landing or folds into a slide.
@@ -71,9 +78,9 @@ export class RunnerCharacter {
       soft(head,side*.084,.084,-.198,.10,.023,.025,p.hair,0,0,side*-.10);
       sphere(head,side*.134,-.058,-.17,.07,.035,.02,'#df9d80');
       // Headphone cushion, inset driver and contrasting outer shell.
-      sphere(head,side*.241,.026,.032,.095,.20,.16,p.ink);
+      if(!guard){sphere(head,side*.241,.026,.032,.095,.20,.16,p.ink);
       sphere(head,side*.272,.028,.032,.045,.153,.12,p.gold);
-      soft(head,side*.295,.028,.032,.012,.062,.057,p.cream);
+      soft(head,side*.295,.028,.032,.012,.062,.057,p.cream);}
     }
     sphere(head,0,-.034,-.219,.070,.093,.071,p.skinLight);
     soft(head,0,-.109,-.197,.091,.016,.020,'#9b6558');
@@ -98,6 +105,11 @@ export class RunnerCharacter {
       sphere(wrist,side*-.064,-.046,-.046,.055,.094,.058,p.skinLight,0,0,side*.3);
       for(let finger=0;finger<3;finger++)soft(wrist,(finger-1)*.034,-.108,-.043,.025,.049,.036,p.skinLight,.25);
       if(side<0){soft(wrist,0,.028,-.093,.12,.05,.017,p.ink);soft(wrist,0,.028,-.106,.059,.029,.009,'#91dfe4',0,0,0,.35);}
+      if(side>0&&!guard&&e.mode==='intro'&&e.introTime<3.3){
+        soft(wrist,0,-.08,-.12,.115,.28,.115,'#d8e5dc');soft(wrist,0,-.08,-.182,.10,.14,.012,p.jacket);soft(wrist,0,.074,-.12,.06,.035,.065,p.ink);
+        if(e.introTime<2.2)for(let i=0;i<9;i++){const along=((e.introTime*3+i/9)%1)*.30,size=.014+along*.08;sphere(wrist,Math.sin(i*7)*along*.18,.08+Math.cos(i*4)*along*.14,-.16-along,size,size,size,i%2?'#91f3d5':'#4ebfac',0,0,0,.8);}
+      }
+      if(side>0&&guard){soft(wrist,0,-.065,-.095,.115,.14,.24,p.ink);sphere(wrist,0,-.065,-.22,.12,.12,.035,'#ffedbd',0,0,0,.9);}
     }
 
     for(const foot of pose.feet){

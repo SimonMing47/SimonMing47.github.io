@@ -11,7 +11,8 @@ export const ROUTE_EVENTS=Object.freeze({
   rhythm:{name:'跳滑接力',short:'连招',hint:'按提示连续跳跃和滑铲，干净通过才计数',color:'#ffc76e',glyph:'↟',reward:750,coins:30},
   convoy:{name:'晚点车潮',short:'避车',hint:'迎面列车交错进站，沿亮起的轨道穿行',color:'#ff977f',glyph:'!',reward:800,coins:35},
   rooftop:{name:'分岔夺宝',short:'冒险',hint:'蓝色地面稳拿奖励；金色车顶每枚额外 +200 分、10 金币',color:'#d2a5ff',glyph:'↗',reward:400,coins:20},
-  works:{name:'施工封线',short:'施工',hint:'黄黑围挡不可穿越，选开放轨道连续跳跃、滑铲',color:'#ffd36d',glyph:'↔',reward:950,coins:40}
+  works:{name:'施工封线',short:'施工',hint:'黄黑围挡不可穿越，选开放轨道连续跳跃、滑铲',color:'#ffd36d',glyph:'↔',reward:950,coins:40},
+  breakout:{name:'封锁突围',short:'出口',hint:'车潮、封线跳跃、低杆滑铲连续交替；全程无碰撞才能抵达出口',color:'#9befe0',glyph:'↗',reward:1600,coins:70,gate:true}
 });
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 function rng(seed){let s=seed>>>0;return()=>{s+=0x6D2B79F5;let t=s;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296;};}
@@ -47,7 +48,7 @@ export class RouteDirector {
   integer(lo,hi){return lo+Math.floor(this.random()*(hi-lo+1));}
   choose(items){return items[this.integer(0,items.length-1)];}
   eventType(){
-    if(!this.eventBag.length){this.eventBag=shuffle(Object.keys(ROUTE_EVENTS),this.random);if(this.eventBag.at(-1)===this.lastEvent)[this.eventBag[0],this.eventBag[this.eventBag.length-1]]=[this.eventBag.at(-1),this.eventBag[0]];}
+    if(!this.eventBag.length){this.eventBag=shuffle(Object.keys(ROUTE_EVENTS).filter(t=>!ROUTE_EVENTS[t].gate),this.random);if(this.eventBag.at(-1)===this.lastEvent)[this.eventBag[0],this.eventBag[this.eventBag.length-1]]=[this.eventBag.at(-1),this.eventBag[0]];}
     return this.lastEvent=this.eventBag.pop();
   }
   finishEvent(nextRow,rooftop=false){this.nextEventRow=nextRow+this.integer(3,5);this.recoveryRows=2;this.pace='recovery';this.paceLeft=2;if(rooftop)this.nextCourseRow=nextRow+this.integer(6,9);}

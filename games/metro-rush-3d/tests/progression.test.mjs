@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { RunnerEngine, DIFFICULTIES } from '../dist/engine.js';
 import { speedProfile } from '../dist/director.js';
-function empty(mode='classic',seed=31){const e=new RunnerEngine(seed,mode);e.start();e.obstacles=[];e.pickups=[];e.tunnels=[];e.courses=[];e.encounters=[];e.nextRow=1e9;return e;}
+function empty(mode='classic',seed=31){const e=new RunnerEngine(seed,mode);e.start({skipIntro:true});e.obstacles=[];e.pickups=[];e.tunnels=[];e.courses=[];e.encounters=[];e.nextRow=1e9;return e;}
 
 test('speed keeps changing beyond the old cap with smooth, bounded and seed-varied cycles',()=>{
   for(const config of Object.values(DIFFICULTIES))for(const seed of [1,31,47]){

@@ -5,6 +5,7 @@ export { multiply, transform } from './math.js';
 import { RunnerCharacter } from './character.js';
 import { roundedBoxGeometry, smoothSphereGeometry, torsoGeometry } from './character-geometry.js';
 import { LANE_WIDTH, randomSource, BONUSES, pickupPose, TRACK } from './engine.js';
+const ease=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
 
 const vertexSource = `#version 300 es
 precision highp float;
@@ -101,7 +102,7 @@ export class WorldRenderer {
     gl.enable(gl.DEPTH_TEST);gl.enable(gl.CULL_FACE);gl.clearColor(0,0,0,0);
     this.cubes=new Batch(gl,cubeGeometry());this.cylinders=new Batch(gl,cylinderGeometry());this.spheres=new Batch(gl,sphereGeometry());
     this.characterBatches={rounded:new Batch(gl,roundedBoxGeometry(),256),smooth:new Batch(gl,smoothSphereGeometry(),256),torso:new Batch(gl,torsoGeometry(),8)};
-    this.character=new RunnerCharacter();
+    this.character=new RunnerCharacter();this.guard=new RunnerCharacter();this.trail=[];this.guardGap=5.9;
     this.viewUniform=gl.getUniformLocation(this.program,'uViewProjection');this.eyeUniform=gl.getUniformLocation(this.program,'uCamera');
     this.skyUniform=gl.getUniformLocation(this.program,'uSky');
     this.tunnelBoundsUniform=gl.getUniformLocation(this.program,'uTunnelBounds');this.tunnelBlendUniform=gl.getUniformLocation(this.program,'uTunnelBlend');
@@ -179,10 +180,11 @@ export class WorldRenderer {
     }
   }
   characterPart(kind,matrix,c,glow=0){this.characterBatches[kind].add(matrix,color(c,glow));}
-  resetCharacter(){this.character.reset();}
+  resetCharacter(){this.character.reset();this.guard.reset();this.trail=[];this.guardGap=5.9;}
   handleEvent(event){this.character.handleEvent(event);}
   player(e,t,menu,dt){
-    const pose=this.character.draw(this,e,dt,this.reduceMotion);
+    const recoil=e.recovery?(1-ease(e.recovery.age/e.recovery.duration))*3:0;
+    const pose=this.character.draw(this,e,dt,this.reduceMotion,{z:2.5+recoil});
     const flying=e.jetpack>0||e.landing;
     if(e.board>0&&!flying){
       const board=transform(e.x,e.y+.12/Math.cos(pose.boardPitch),2.5,1,1,1,pose.boardPitch);
@@ -205,7 +207,40 @@ export class WorldRenderer {
       this.box(e.x+.56,magnetY-.13,2.6,.285,.085,.085,'#f783ba',0,0,0,.8);
     }
     if(e.invulnerable>0){for(const s of [-1,1])this.box(e.x+s*.6,e.y+1,2.5,.028,1.6,.025,'#d2efff',0,0,0,1);}
+    if(e.smoke>0)for(let i=0;i<7;i++){const u=this.reduceMotion?i/7:(t*.5+i/7)%1,size=(.18+u*.6)*Math.min(1,e.smoke);this.sphere(e.x+Math.sin(i*3)*u*.9,e.y+.45+u*.7,4.0+u*3,size,size*.8,size,'#9facc7',.25);}
     const shadow=1-Math.min((e.y-e.floorHeight)/6,.3);this.cylinder(menu?0:e.x,(menu?0:e.floorHeight)+.01,2.55,.95*shadow,1.1*shadow,.008,'#21363d',Math.PI/2,0,0,.2);
+  }
+  opening(e,dt){
+    const t=e.introTime,launch=ease((t-3.3)/1.9),z=2.5+launch*18;
+    this.train(-2.7,z,'#368e96',8.8,true);
+    // Paint appears stroke-by-stroke on the carriage side, synchronized to the can.
+    const strokes=[[-1,.75,-1,2.1],[-1,2.1,-.35,1.25],[-.35,1.25,.30,2.1],[.30,2.1,.30,.75],[.85,.75,.85,2.1],[.85,2.1,1.8,2.1],[1.8,2.1,1.8,1.45],[1.8,1.45,.85,1.45],[.85,1.45,1.9,.75]];
+    for(let i=0;i<strokes.length;i++){
+      const progress=Math.min(1,Math.max(0,t/2.2*strokes.length-i));if(!progress)continue;
+      const [z0,y0,z1,y1]=strokes[i],dy=(y1-y0)*progress,dz=(z1-z0)*progress,len=Math.hypot(dy,dz);
+      this.box(-1.487,y0+dy/2,z+z0+dz/2,.028,len+.1,.16,i<4?'#84ead1':'#ffd775',Math.atan2(dz,dy),0,0,.3);
+    }
+    const paused=e.mode==='paused',runner=Object.assign(Object.create(e),{mode:paused?'paused':'intro'});
+    this.character.draw(this,runner,dt,this.reduceMotion,{x:-.48*(1-launch),y:0,z:2.5,yaw:Math.PI/2*(1-launch)});
+    if(t>=2.2){
+      const arrival=ease((t-2.2)/1.1),guard=Object.assign(Object.create(e),{mode:paused?'paused':'running',speed:launch?e.speed:7,x:2.8-arrival*1.5,y:0,lane:0,actorRole:'guard',guardSpot:launch<.1,jetpack:0,board:0,sneakers:0,grounded:true,supportId:null});
+      this.guard.draw(this,guard,dt,this.reduceMotion,{role:'guard',x:guard.x*(1-launch)+.65*launch,y:0,z:6.4-arrival*1.4+launch*3.4,yaw:launch?0:1.1});
+      if(launch<.2)for(let i=0;i<7;i++)this.sphere(.8-i*.30,1.4,4.5-i*.25,.08+i*.035,.08+i*.035,.08+i*.035,'#ffe5ad',.7);
+    }
+    this.box(4.6,.3,2.5,1.0,.6,1.2,'#626c65');this.box(4.6,.69,2.5,1.12,.15,1.3,'#bca070');
+  }
+  pursuer(e,dt){
+    if(!e.pursuit||e.mode==='escaped')return;
+    const moving=['running','caught'].includes(e.mode),caught=e.mode==='caught'||e.mode==='over';
+    if(moving&&(!this.trail.length||this.trail.at(-1).distance!==e.distance)){
+      this.trail.push({distance:e.distance,x:e.x,y:e.y,lane:e.lane,vy:e.vy,slide:e.slide,grounded:e.grounded,floorHeight:e.floorHeight,supportId:e.supportId,flight:e.jetpack>0||e.landing});
+      while(this.trail.length>120)this.trail.shift();
+    }
+    if(moving)this.guardGap+=((caught?.45:e.pursuit.gap)-this.guardGap)*(1-Math.exp(-5*dt));
+    const target=e.distance-this.guardGap,sample=this.trail.reduce((best,p)=>Math.abs(p.distance-target)<Math.abs(best.distance-target)?p:best,this.trail[0]||{distance:e.distance,x:e.x,y:e.y,lane:e.lane,vy:0,slide:0,grounded:e.grounded,floorHeight:e.floorHeight,supportId:e.supportId});
+    if(sample.flight)return;
+    const actor=Object.assign(Object.create(e),sample,{mode:e.mode,actorRole:'guard',x:sample.x+(sample.x>0?-.6:.6),jetpack:0,board:0,sneakers:0,landing:false,recovery:null,obstacles:e.obstacles.map(o=>({...o,ahead:o.ahead+this.guardGap}))});
+    this.guard.draw(this,actor,dt,this.reduceMotion,{role:'guard',x:actor.x,y:sample.y,z:2.5+this.guardGap,scale:1.04});
   }
   bonus(p,t){
     const x=p.lane*LANE_WIDTH,z=2.5-p.ahead,y=p.y;
@@ -224,6 +259,9 @@ export class WorldRenderer {
       this.box(0,0,0,.42,.66,.31,'#6195e7',0,0,0,.35,parent);for(const s of [-1,1]){this.cylinder(s*.25,0,0,.22,.22,.62,c,Math.PI/2,0,0,.45,parent);this.box(s*.25,-.4,0,.11,.18+Math.sin(t*21)*.06,.11,'#e5faff',0,0,0,1,parent);}
     }else if(p.type==='board'){
       this.box(0,0,0,.32,1.08,.15,c,0,0,-.38,.5,parent);this.cylinder(-.19,.49,0,.33,.35,.15,c,0,0,0,.5,parent);this.cylinder(.19,-.49,0,.33,.35,.15,c,0,0,0,.5,parent);this.box(0,0,.085,.05,.73,.025,'#e1f8ff',0,0,-.38,1,parent);
+    }else if(p.type==='smoke'){
+      this.cylinder(0,0,0,.38,.38,.65,c,Math.PI/2,0,0,.3,parent);this.box(0,.36,0,.13,.08,.15,'#e9f0e2',0,0,0,.7,parent);
+      for(let i=0;i<3;i++)this.sphere(Math.sin(t*2+i)*.12,.48+i*.13,0,.18+i*.06,.13,.18,c,.45,parent);
     }else{
       this.box(0,0,0,.58,.56,.54,c,0,0,0,.35,parent);this.box(0,.31,0,.66,.12,.62,'#ffe49c',0,0,0,.6,parent);this.box(0,0,.278,.11,.58,.018,'#fff2cc',0,0,0,.8,parent);this.box(0,.385,0,.19,.1,.45,'#ffefb4',0,0,.25,.6,parent);
     }
@@ -328,22 +366,23 @@ export class WorldRenderer {
   }
   burst(p){for(let i=0;i<7;i++)this.particles.push({x:p.x??p.lane*LANE_WIDTH,y:p.y,z:2.5-p.ahead,vx:(Math.random()-.5)*3,vy:1.5+Math.random()*2,vz:2+Math.random()*2,life:.45,color:p.color||(p.magnetic?'#ffc1e6':'#ffe29a')});if(this.particles.length>100)this.particles.splice(0,this.particles.length-100);}
   render(e,dt){
-    const menu=e.mode==='menu';const moving=e.mode==='running'||menu;
+    const menu=e.mode==='menu',intro=e.mode==='intro'||e.mode==='paused'&&e.pausedFrom==='intro';const moving=['running','intro','caught'].includes(e.mode)||menu;
+    if(!moving)dt=0;
     if(moving)this.visualTime+=dt;const t=this.visualTime;
     if(menu&&!this.reduceMotion)this.demoDistance+=dt*3.3;
     const distance=menu?this.demoDistance:e.distance;
     this.resize();this.cubes.count=0;this.cylinders.count=0;this.spheres.count=0;
     for(const batch of Object.values(this.characterBatches))batch.count=0;
     this.scenery(distance,t,menu?[{start:60+distance,end:150+distance}]:e.tunnels,e,menu);
-    if(!menu)encounterScenery(this,e,distance,t);
-    if(!menu)for(const section of e.tunnels)this.tunnelSection(section,distance);
+    if(!menu&&!intro)encounterScenery(this,e,distance,t);
+    if(!menu&&!intro)for(const section of e.tunnels)this.tunnelSection(section,distance);
     if(menu){
       this.train(-2.7,-15,'#2c999b');
       this.obstacle({type:'train',lane:0,ahead:53,halfLength:19,roofRoute:true,row:3});
       this.ramp({type:'ramp',lane:0,ahead:27,halfLength:7,from:0,to:TRACK.roofHeight});
       this.tunnelSection({start:60,end:150},0);
       for(let i=0;i<14;i++){const ahead=6+i*3,h=Math.max(0,Math.min(1,(ahead-20)/14))*TRACK.roofHeight;this.cylinder(0,h+.95,2.5-ahead,.55,.55,.13,'#ffd458',0,t+i*.3,0,.65);}
-    }else{
+    }else if(intro){this.opening(e,dt);}else{
       for(const o of e.obstacles)if(o.ahead-o.halfLength<180)this.obstacle(o);
       for(const p of e.pickups){
         const x=p.x??p.lane*LANE_WIDTH,z=2.5-p.ahead,y=p.y;
@@ -360,7 +399,7 @@ export class WorldRenderer {
         }else this.bonus(p,t);
       }
     }
-    this.player(e,t,menu,dt);
+    if(!intro){this.player(e,t,menu,dt);if(!menu)this.pursuer(e,dt);}
     for(const p of this.particles){if(moving){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy-=8*dt;p.z+=p.vz*dt;}const s=Math.max(.001,p.life*.15);this.box(p.x,p.y,p.z,s,s,s,p.color,t,t,0,1);}
     this.particles=this.particles.filter(p=>p.life>0);
     const mobile=this.canvas.clientWidth<760;
@@ -370,8 +409,9 @@ export class WorldRenderer {
     const shake=this.reduceMotion?0:Math.sin(t*72)*this.shake*.08;
     const flight=e.jetpack>0||e.landing;
     const desiredHeight=menu?0:Math.max(e.floorHeight,e.y*(flight?.9:.65));this.camHeight+=(desiredHeight-this.camHeight)*(1-Math.exp(-5*dt));
-    const eye=[this.camX+shake,menu?(mobile?3.4:4.3):Math.min(e.environment==='tunnel'?8.3:20,5.2+this.camHeight*.9),menu?(mobile?8.2:10):11.6];
-    const at=[menu?(mobile?1.2:1.1):this.camX*.7,menu?(mobile?-.7:.8):1.1+this.camHeight*.8,-21];
+    let eye=[this.camX+shake,menu?(mobile?3.4:4.3):Math.min(e.environment==='tunnel'?8.3:20,5.2+this.camHeight*.9),menu?(mobile?8.2:10):11.6+Math.max(0,(e.pursuit?.pressure||0)-45)/55*1.8];
+    let at=[menu?(mobile?1.2:1.1):this.camX*.7,menu?(mobile?-.7:.8):1.1+this.camHeight*.8,-21];
+    if(intro){const u=ease((e.introTime-3.3)/1.9),a=[mobile?7.8:6.8,3.7,10],b=[-1,1.45,2];eye=eye.map((v,i)=>a[i]+(v-a[i])*u);at=at.map((v,i)=>b[i]+(v-b[i])*u);}
     const speedFov=menu||this.reduceMotion?0:Math.max(0,Math.min(7,(e.speed-e.config.startSpeed)*.20));
     const vp=multiply(perspective(((mobile?66:57)+speedFov)*Math.PI/180,this.canvas.width/this.canvas.height,.1,300),lookAt(eye,at));
     const gl=this.gl;const tunnel=menu?{start:60+distance,end:150+distance}:e.tunnels.find(s=>s.end>distance-15&&s.start<distance+210);

@@ -1,13 +1,13 @@
 {
   "name": "metro-rush-3d",
-  "version": "5.0.0",
+  "version": "6.0.0",
   "private": true,
   "type": "module",
   "description": "An original 3D endless subway runner with keyboard and touch controls",
   "scripts": {
     "start": "node scripts/serve.mjs",
     "test": "node --test tests/*.test.mjs",
-    "check": "node --check dist/game.js && node --check dist/engine.js && node --check dist/renderer.js && node --check dist/animation.js && node --check dist/character.js && node --check dist/character-geometry.js && node --check dist/math.js && node --check dist/director.js && node --check dist/district-scenery.js"
+    "check": "node --check dist/game.js && node --check dist/engine.js && node --check dist/renderer.js && node --check dist/animation.js && node --check dist/character.js && node --check dist/character-geometry.js && node --check dist/math.js && node --check dist/director.js && node --check dist/district-scenery.js && node --check dist/pursuit.js"
   },
   "engines": {
     "node": ">=20"
