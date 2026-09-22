@@ -1,0 +1,12 @@
+{
+  "resources": 47,
+  "faults": 95,
+  "sources": 22,
+  "data_reference_checks": "passed",
+  "static_asset_checks": "passed",
+  "javascript_syntax_checks": "passed (node --check)",
+  "standalone_html_build": "passed",
+  "private_configuration_fields": "excluded",
+  "browser_smoke_test": "not completed: the available Chromium blocks local file and localhost navigation by administrator policy",
+  "geometry_build_checks": "passed (235 resource/profile combinations; finite vertices and resource references)"
+}
