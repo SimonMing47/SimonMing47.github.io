@@ -1,0 +1,36 @@
+{
+  "errors": [],
+  "resources": 47,
+  "faults": 95,
+  "detailedParagraphs": 141,
+  "sources": 32,
+  "models": 235,
+  "diagrams": 60,
+  "largestModelParts": 1097,
+  "browser": {
+    "page_errors": [],
+    "diagram_issues": [],
+    "resource_issues": [],
+    "renderer": "software 3D fallback",
+    "resources_exercised": 47,
+    "max_depth": "8",
+    "collapse_count": 8,
+    "expanded_count": 47,
+    "fault_cards": 4,
+    "cqe_hits": 1,
+    "fault_jump": {
+      "current": "cq",
+      "activeFault": "B15",
+      "tab": "faults",
+      "loc": "cq"
+    },
+    "overflow_1280": false,
+    "wire_overflow_page_1280": false,
+    "overflow_390": false,
+    "wire_overflow_page_390": false,
+    "minimap_click": "cpu",
+    "wire_click": "hbm"
+  },
+  "version": "2.0.0",
+  "scope": "geometry, source references, DOM interaction and software 3D rendering; not real hardware validation"
+}
