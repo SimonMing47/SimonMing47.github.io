@@ -20,7 +20,12 @@ const report=vm.runInContext(`(()=>{
  return {errors,softwareModules:SOFTWARE_MODULES.length,resources:RESOURCES.length,faults:FAULTS.length,newDetailedSections:SOFTWARE_MODULES.reduce((n,m)=>n+m.sections.length,0),sources:so.length,softwareSources:Object.keys(SOURCES).filter(x=>x.startsWith('sw_')).length,modelProfileCases:models,diagramProfileCases:diagrams,sequenceProfileCases:sequences};
 })()`,ctx,{timeout:35000});
 assert.deepEqual(Array.from(report.errors),[]);
-const {create,KEY,MAX_BYTES}=require('../src/bookmarks.js');
+// The parent website is type:module. Load the browser script in its own realm,
+// as index.html does, rather than treating this .js asset as a CommonJS module.
+const bookmarkCtx=vm.createContext({TextEncoder});
+vm.runInContext(fs.readFileSync(path.join(root,'src/bookmarks.js'),'utf8'),bookmarkCtx,{filename:'bookmarks.js'});
+const {create,KEY,MAX_BYTES}=bookmarkCtx.AtlasBookmarks;
+assert.equal(typeof create,'function','bookmark factory must be exposed to the browser realm');
 const base={resources:['cann','kv-cache','hbm'],faults:['C18'],profiles:['A2','A3','A5','NV'],clock:()=> '2026-09-23T08:00:00.000Z'};
 let backing=new Map(),writes=[];const storage={getItem:k=>backing.get(k)||null,setItem:(k,v)=>{writes.push(k);backing.set(k,v);}};
 let a=create({...base,storage});assert.equal(a.snapshot().mode,'persistent');
