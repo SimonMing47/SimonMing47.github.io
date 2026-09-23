@@ -17,6 +17,8 @@ jobs:
         working-directory: projects/ai-cluster-3d
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v6
         with:
           node-version: '22'
@@ -38,6 +40,19 @@ jobs:
           ATLAS_TEST_HTTP: '1'
           ATLAS_TEST_CHROMIUM: 'bundled'
         run: python tests/browser_smoke.py
+      - name: Package reviewed source and standalone site
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import zipfile
+          root = Path.cwd()
+          with zipfile.ZipFile('dist/ai-infra-atlas-source.zip', 'w', zipfile.ZIP_DEFLATED) as archive:
+              for item in sorted(root.rglob('*')):
+                  rel = item.relative_to(root)
+                  if not item.is_file() or any(p in {'.git', '__pycache__', 'dist', 'screens'} for p in rel.parts):
+                      continue
+                  archive.write(item, 'ai-infra-atlas/' + rel.as_posix())
+          PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -45,3 +60,10 @@ jobs:
           path: |
             projects/ai-cluster-3d/tests/browser-results.json
             projects/ai-cluster-3d/tests/screens/*.png
+      - uses: actions/upload-artifact@v4
+        with:
+          name: atlas-verified-site
+          if-no-files-found: error
+          path: |
+            projects/ai-cluster-3d/dist/index.html
+            projects/ai-cluster-3d/dist/ai-infra-atlas-source.zip
