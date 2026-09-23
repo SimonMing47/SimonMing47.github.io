@@ -1,57 +1,35 @@
-# 算力集群三维资源图谱
+# AI Infra 全栈知识图谱
 
-可旋转、缩放、逐级展开的静态三维网站。围绕机房、供配电、散热、线缆、服务器、CPU、NPU、HBM、节点内互联、交换设备与超节点展示资源组成，并把故障知识映射到相关资源。
+可交互的静态网站：122个硬件/软件知识节点、95条故障说明、38类组网与逻辑图。硬件保留三维拆解，软件展开运行时、容器、调度、训练、推理与可观测性。鼠标悬停显示解释、类比与来源，知识点支持本地收藏和备注。
 
-本目录从对话交付的「故障增强版」整理而来，保留 47 个资源节点、95 条故障说明、产品视角、协议解释、厂商对照及参考资料。三维模型是功能结构示意，不是原厂 CAD；关联高亮不是正在发生的告警。产品代际和未公开细节的限定保留在页面中。
-
-## 运行
-
-直接用浏览器打开 `index.html`，或在本目录运行：
+打开本目录 `index.html` 即可使用。持久收藏推荐在固定HTTP/HTTPS源下使用；直接file://打开时遵循浏览器限制。网站没有后端账户、设备接口或收藏上传。
 
 ```bash
 python -m http.server 8080
 ```
 
-然后访问 `http://localhost:8080/`。站点所有脚本与样式均在本目录，不加载外部 CDN，不需要 npm 或后端。浏览器须允许 JavaScript；引擎包含 WebGL 与软件投影回退。
-
-## 操作
-
-拖动旋转，滚轮缩放；点击模型部件、标签、左侧目录或下方入口进入资源层。展开滑块控制部件分离程度。右侧可查看资源、承载协议、故障、厂商对照和来源；故障目录支持搜索、筛选并反向定位资源。
-
-## 公开数据范围
-
-保留 73 条收录故障与 22 条补充案例的名称、领域、机理、判断证据、判断边界、资源关系和来源。不同平面的同名记录分别保存。
-
-**不发布原始环境的故障生成开关、恢复开关、恢复方式、规则入口或修改时间。** 这些字段已从公开数据与界面移除，未放入隐藏文件或历史源码。原交付文件保持不变。本网站不连接设备、不执行恢复策略，不含账号凭据或实时监控接口。
-
-## 源码结构
-
-```text
-index.html           页面入口
-src/style.css        界面与响应式样式
-src/engine.js        三维渲染、相机、点选与标签
-src/models.js        程序化资源模型
-src/app.js           导航、说明面板、故障检索与交互
-data/resources.js    资源说明与层级
-data/faults.js       脱敏后的故障知识与资源映射
-data/profiles.js     产品视角与规格边界
-data/sources.js      参考资料链接及支持范围
-data/groups.js       导航分组
-scripts/build.py     生成可离线使用的单文件 HTML
-scripts/validate.py  数据引用、静态资源与脱敏检查
-```
-
-`data/*.js` 是直接可编辑的数据源，以常量包装 JSON；修改后刷新页面即可。需要单文件交付时运行：
+访问 `http://localhost:8080/`。构建可离线分发的单文件：
 
 ```bash
+node tests/structure.test.cjs
+node tests/software.test.cjs
 python scripts/validate.py
 python scripts/build.py
 ```
 
-生成文件为 `dist/index.html`。构建与检查脚本使用 Python 3.9+ 标准库，不安装第三方依赖。
+输出为 `dist/index.html`。运行网站不需要Python或Node，以上工具仅用于本地服务、构建和测试。
 
-## 资料边界
+## 主要文件
 
-公开资料链接和支持范围保存在 `data/sources.js`。来源用于解释术语、产品背景与一般机理，不能替代某平台的专有告警码、阈值或现场诊断。A5 与具体公开型号没有核实为一一对应，不套用 A3 或 Atlas 950 的规格。厂商对照是架构层次对照，不是等价性能比较。
+- `data/resources.js` / `faults.js`：原硬件说明与脱敏故障知识。
+- `data/guide.js`：硬件详细解释与产品证据边界。
+- `data/software-init.js` / `software-0.js` 至 `software-7.js`：软件结构、解释、类比、边界。
+- `data/software-sources.js` / `software-link.js`：公开来源范围与硬件/软件关联。
+- `src/engine.js` / `models*.js`：三维原理模型。
+- `src/topology.js` / `software-diagrams.js`：硬件组网与软件逻辑、时序、泳道图。
+- `src/knowledge.js` / `bookmarks.js`：悬停、全文解释及版本化本地收藏。
+- `tests/software.test.cjs` / `browser_smoke.py`：结构与交互回归。
 
-本提交只新增独立项目目录，不覆盖仓库现有页面，不修改部署配置。
+[完整v3说明](docs/V3.md) · [v2设计边界](docs/V2.md)
+
+公开数据不含原环境的故障生成/恢复开关、规则和修改时间。模型不是原厂CAD；A5软件支持信息不用于推算硬件型号映射。每条参考资料的支持范围、版本和核读状态在页面内注明。
