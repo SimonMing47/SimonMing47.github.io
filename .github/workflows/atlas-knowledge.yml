@@ -1,0 +1,72 @@
+name: AI Infra Atlas checks
+on:
+  pull_request:
+    paths: ['projects/ai-cluster-3d/**', '.github/workflows/atlas-knowledge.yml']
+  push:
+    branches: [main]
+    paths: ['projects/ai-cluster-3d/**', '.github/workflows/atlas-knowledge.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  static-and-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: projects/ai-cluster-3d
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Validate data, geometry and bookmark storage adapter
+        run: |
+          node tests/structure.test.cjs
+          node tests/software.test.cjs
+          node tests/network.test.cjs | tee tests/network-results.json
+          python scripts/validate.py
+          python scripts/build.py
+      - name: Install browser test dependency
+        run: |
+          pip install playwright==1.55.0
+          python -m playwright install --with-deps chromium
+      - name: Test live browser and same-origin localStorage
+        env:
+          ATLAS_TEST_HTTP: '1'
+          ATLAS_TEST_CHROMIUM: 'bundled'
+        run: |
+          python tests/browser_smoke.py
+          python tests/network_browser.py
+      - name: Package reviewed source and standalone site
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import zipfile
+          root = Path.cwd()
+          with zipfile.ZipFile('dist/ai-infra-atlas-source.zip', 'w', zipfile.ZIP_DEFLATED) as archive:
+              for item in sorted(root.rglob('*')):
+                  rel = item.relative_to(root)
+                  if not item.is_file() or any(p in {'.git', '__pycache__', 'dist', 'screens'} for p in rel.parts):
+                      continue
+                  archive.write(item, 'ai-infra-atlas/' + rel.as_posix())
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: atlas-browser-results
+          path: |
+            projects/ai-cluster-3d/tests/*results.json
+            projects/ai-cluster-3d/tests/screens/*.png
+      - uses: actions/upload-artifact@v4
+        with:
+          name: atlas-verified-site
+          if-no-files-found: error
+          path: |
+            projects/ai-cluster-3d/dist/index.html
+            projects/ai-cluster-3d/dist/ai-infra-atlas-source.zip

@@ -1,0 +1,5 @@
+/* Separate the documented A5 product variants without crowding narrow displays. */
+.profile-tabs{grid-template-columns:repeat(6,minmax(0,1fr))}.network-evidence{padding:10px 12px;margin:0 0 22px;border:1px solid #315766;border-radius:8px;background:#112c3444}.network-evidence .knowledge-section{padding:10px 0}.network-evidence p{font-size:12px;line-height:1.95}.topology-links{margin-top:12px;max-height:none!important}.network-evidence .section-head{margin-top:2px}.network-evidence .save-point{font-size:10px}.profile-tabs small{overflow-wrap:anywhere}
+@media(max-width:680px){.profile-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}.profile-tabs small{min-height:0}.network-evidence{padding:10px}}
+
+.modal-card.network-large{width:min(1500px,100%);max-height:96vh}.network-large .modal-body{overflow:auto}.network-large .topology-svg{min-width:1000px}.network-large .modal-controls{display:none}

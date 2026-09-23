@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="可分层展开的算力集群三维资源图谱：机房、线缆、计算、互联以及原理与故障映射。"><title>算力资源图谱 · 3D结构与故障映射</title><link rel="stylesheet" href="src/style.css"><link rel="stylesheet" href="src/explorer.css"></head><body>
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="AI Infra全栈知识图谱：硬件三维、软件架构、运行时、调度、训练、推理与可观测性，支持悬停解释和浏览器本地收藏。"><title>AI Infra 全栈图谱 · 硬件、软件与知识收藏</title><link rel="stylesheet" href="src/style.css"><link rel="stylesheet" href="src/explorer.css"><link rel="stylesheet" href="src/knowledge.css"><link rel="stylesheet" href="src/network.css"></head><body>
 <header class="topbar"><div class="brand"><div class="brand-symbol" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div><strong>算力资源图谱</strong><small>RESOURCE × PROTOCOL × FAILURE</small></div></div><div class="top-meta"><span class="badge teal">硬件资源侧</span><span class="badge">47 资源节点</span><span class="badge orange">73 原始记录 + 22 补充</span></div><div class="top-actions"><button class="mobile-nav-button" id="nav-toggle" aria-label="打开资源导航">资源</button><button class="primary" id="open-catalog">故障目录 <span class="desktop-only">／</span></button><button class="quiet desktop-only" id="open-help">操作与来源</button></div></header>
 <div class="workspace"><aside class="nav" id="nav"><div class="nav-header"><div class="eyebrow">01 / RESOURCE EXPLORER</div><h2>从设施到计算域</h2><div class="search-wrap"><input id="resource-search" type="search" placeholder="搜索资源、缩写或故障" aria-label="搜索资源"></div></div><nav class="resource-tree" id="resource-tree" aria-label="资源层级"></nav><footer class="nav-footer"><span class="dotmark">●</span> 知识记录 · 非实时告警<br>编号计数代表关联说明数量。<br>不同平面的同名记录独立保存。</footer></aside>
 <main class="scene-column"><div class="scene-head"><nav class="breadcrumb" id="breadcrumb" aria-label="当前资源路径"></nav><div class="scene-title-row"><h1 id="scene-title"></h1><span class="level-name" id="scene-en"></span></div><div class="profile-row"><label for="profile-select">产品视角</label><select id="profile-select"></select><button class="profile-info" id="profile-info">规格与边界 ↗</button></div></div><div class="stage"><canvas id="scene-canvas" aria-label="可旋转、缩放和点击展开的三维资源模型" tabindex="0"></canvas><div class="labels" id="labels"></div><div class="stage-meta"><div><div class="stage-kicker" id="scene-profile"></div><div class="render-status" id="render-status"></div></div><div class="stage-boundary" id="scope-chip">结构示意 · 非实物CAD</div></div><div class="stage-hint"><div class="legend-items"><span style="--c:#35cbb7">计算</span><span style="--c:#80a8db">内存</span><span style="--c:#a18bef">总线</span><span style="--c:#e6b567">网络</span><span style="--c:#51abeb">冷却</span></div><div class="gesture">拖动旋转 · 滚轮缩放 · 点击部件深入</div></div></div><div class="scene-controls"><div class="control-group"><button data-view="iso" title="恢复等轴观察角度">等轴</button><button data-view="top">俯视</button><button data-view="front">正视</button></div><div class="explode-control"><label for="explode">部件展开</label><input id="explode" type="range" min="0" max="100" value="0"><output id="explode-value" for="explode">0%</output></div><div class="control-group"><button id="zoom-in" aria-label="放大">＋</button><button id="zoom-out" aria-label="缩小">－</button><button id="reset-scene">复位</button></div></div><div class="scene-note" id="scene-note"></div><div class="mini-explore"><div class="caption">继续深入 · 可点击三维部件或以下入口</div><div class="part-links" id="part-links"></div></div></main>
@@ -10,9 +10,26 @@
 <script src="data/sources.js"></script>
 <script src="data/groups.js"></script>
 <script src="data/guide.js"></script>
+<script src="data/software-init.js"></script>
+<script src="data/software-sources.js"></script>
+<script src="data/software-0.js"></script>
+<script src="data/software-1.js"></script>
+<script src="data/software-2.js"></script>
+<script src="data/software-3.js"></script>
+<script src="data/software-4.js"></script>
+<script src="data/software-5.js"></script>
+<script src="data/software-6.js"></script>
+<script src="data/software-7.js"></script>
+<script src="data/software-link.js"></script>
+<script src="data/network-review.js"></script>
 <script src="src/engine.js"></script>
 <script src="src/models.js"></script>
 <script src="src/models-v2.js"></script>
 <script src="src/topology.js"></script>
+<script src="src/software-diagrams.js"></script>
+<script src="src/network-v31.js"></script>
+<script src="src/bookmarks.js"></script>
 <script src="src/app.js"></script>
-<script src="src/explorer.js"></script></body></html>
+<script src="src/explorer.js"></script>
+<script src="src/knowledge.js"></script>
+<script src="src/network-ui.js"></script></body></html>
