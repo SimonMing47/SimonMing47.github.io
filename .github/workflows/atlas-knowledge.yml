@@ -29,6 +29,7 @@ jobs:
         run: |
           node tests/structure.test.cjs
           node tests/software.test.cjs
+          node tests/network.test.cjs | tee tests/network-results.json
           python scripts/validate.py
           python scripts/build.py
       - name: Install browser test dependency
@@ -39,7 +40,9 @@ jobs:
         env:
           ATLAS_TEST_HTTP: '1'
           ATLAS_TEST_CHROMIUM: 'bundled'
-        run: python tests/browser_smoke.py
+        run: |
+          python tests/browser_smoke.py
+          python tests/network_browser.py
       - name: Package reviewed source and standalone site
         run: |
           python - <<'PY'
@@ -58,7 +61,7 @@ jobs:
         with:
           name: atlas-browser-results
           path: |
-            projects/ai-cluster-3d/tests/browser-results.json
+            projects/ai-cluster-3d/tests/*results.json
             projects/ai-cluster-3d/tests/screens/*.png
       - uses: actions/upload-artifact@v4
         with:
